@@ -6,8 +6,6 @@
 
 <p>See your NetBird peers in Termix, add them as hosts in one click and find out whether your policies let Termix reach their SSH port</p>
 
-<p><a href="README.de.md">Deutsch</a></p>
-
 </div>
 
 <br />
