@@ -60,4 +60,20 @@ file per theme scoped under `.<id>`). A theme only plugin has no `src/`: just `m
 Keep this section current when the plugin changes: what it does, how it is put together, decisions that
 aren't obvious from the code, and anything that has bitten you before.
 
-- What it does: a template example that keeps short notes per user. Replace this.
+- What it does: lists NetBird peers in a sidebar panel (`netbird`), offers "Add as host" through
+  `shell.openHostEditor` and checks per peer whether a NetBird access policy lets the Termix server's
+  own peer open TCP to the SSH port.
+- How it is put together: `src/backend/netbird-api.ts` (GET `/api/peers` and `/api/policies` through
+  `ctx.fetch`, `Authorization: Token <pat>`, only the configured host via `allowPrivateHosts`),
+  `src/backend/reachability.ts` (pure policy evaluation, all rules tested in
+  `tests/backend/reachability.test.ts`), `src/backend/routes.ts` (one route `GET /peers` behind
+  `peers.view`), `src/frontend/NetbirdPeersPanel.tsx`.
+- Decisions:
+  - No `hosts:write`: the host editor creates the host, the user saves it. Keeps the plugin read only.
+  - No `hosts:status-provide`: that capability makes the plugin the single source of every host's
+    status dot and would push out the Host Status plugin. Peer state is shown in the panel instead.
+  - No database: everything is read live from NetBird on each panel load.
+  - "Add as host" uses the NetBird IP, not the DNS label: the label only resolves where NetBird DNS
+    is on, and servers often run with `--disable-dns`.
+  - The check reads policies only. Posture checks are flagged, not evaluated.
+- Not in 1.0: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes.

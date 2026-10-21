@@ -1,27 +1,71 @@
 {
   "plugin": {
-    "name": "Hello World",
-    "description": "A minimal Termix plugin: one tab, one route, one setting and one table."
+    "name": "NetBird",
+    "description": "Lists the peers of your NetBird network, adds them as hosts and checks whether your access policies let Termix reach their SSH port."
   },
-  "tab": {
-    "title": "Hello World",
-    "empty": "No notes yet.",
-    "placeholder": "Write a note",
-    "add": "Add",
-    "error": "Could not load or save notes."
+  "nav": {
+    "netbird": "NetBird"
+  },
+  "panel": {
+    "search": "Search peers",
+    "refresh": "Refresh",
+    "loading": "Loading peers…",
+    "notConfigured": "Set the NetBird API token in Settings, Plugins, NetBird.",
+    "tokenRejected": "NetBird rejected the API token.",
+    "apiError": "The NetBird management API could not be read.",
+    "empty": "No peers in this NetBird network.",
+    "noMatches": "No peer matches the search.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Last seen {{when}}",
+    "copyIp": "Copy NetBird IP",
+    "ipCopied": "NetBird IP copied",
+    "copyFailed": "Could not copy",
+    "addHost": "Add as host",
+    "termixPeer": "Checked from Termix peer {{name}}",
+    "termixPeerMissing": "The Termix peer from the settings is not in this network.",
+    "termixPeerUnset": "Set the Termix peer in the settings to check SSH reachability.",
+    "self": "This is the Termix server"
+  },
+  "reach": {
+    "allowed": "SSH {{port}} allowed",
+    "allowedBy": "Allowed by: {{policies}}",
+    "postureChecks": "Posture checks apply and can still block the connection.",
+    "blocked": "No policy allows SSH {{port}}",
+    "blockedHint": "No NetBird policy lets the Termix peer open TCP {{port}} to this peer.",
+    "unknown": "Not checked"
   },
   "permissions": {
-    "use": {
-      "title": "Use Hello World",
-      "description": "Open the Hello World tab and keep notes in it."
+    "peers": {
+      "view": {
+        "title": "View NetBird peers",
+        "description": "See every peer of the NetBird network, its groups and which policies reach it."
+      }
     }
   },
   "settings": {
-    "admin": {
-      "greeting": {
-        "label": "Greeting",
-        "description": "Shown at the top of the Hello World tab."
-      }
+    "group": {
+      "api": "NetBird API",
+      "check": "Reachability check"
+    },
+    "managementUrl": {
+      "label": "Management URL",
+      "description": "Your self-hosted management server, for example https://vpn.example.com. Leave empty for NetBird Cloud.",
+      "placeholder": "https://api.netbird.io"
+    },
+    "apiToken": {
+      "label": "API token",
+      "description": "A personal access token of a NetBird service account. Read access is enough; an auditor role is recommended.",
+      "placeholder": "nbp_..."
+    },
+    "termixPeer": {
+      "label": "Termix peer",
+      "description": "The NetBird peer this Termix server runs on: its name, DNS label or NetBird IP. Used for the SSH reachability check.",
+      "placeholder": "termix"
+    },
+    "sshPort": {
+      "label": "SSH port",
+      "description": "The port the reachability check and new hosts use."
     }
   }
 }

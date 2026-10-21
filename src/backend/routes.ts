@@ -1,76 +1,118 @@
 import type { Request, Response, Router } from "express";
-import { desc, eq } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { PluginContext } from "@termix-ssh/plugin-sdk/backend";
+import { loadPeersAndPolicies, NetbirdApiError } from "./netbird-api.js";
+import { evaluate, findPeer, type Reachability } from "./reachability.js";
 
-// The table object ctx.db.define hands back. Drizzle's own types are
-// per dialect, so the routes treat it loosely.
-type NotesTable = any;
+export interface PeerView {
+  id: string;
+  name: string;
+  ip: string;
+  dnsLabel: string;
+  os: string;
+  connected: boolean;
+  lastSeen: string | null;
+  groups: string[];
+  sshPort: number;
+  reachability: Reachability;
+}
 
-export function registerRoutes(
-  router: Router,
-  ctx: PluginContext,
-  notesTable: NotesTable,
-): void {
-  router.use(ctx.rbac.require("use") as never);
+export interface PeersResponse {
+  configured: boolean;
+  termixPeer: string | null;
+  /** The Termix peer setting is filled in but matches no peer. */
+  termixPeerMissing: boolean;
+  peers: PeerView[];
+  error?: "token" | "api";
+}
 
-  const client = () => ctx.db.client<BetterSQLite3Database>();
-  const actor = () => ctx.currentActor() as string;
+function clampPort(value: unknown): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(String(value ?? ""), 10);
+  return Number.isInteger(n) && n >= 1 && n <= 65535 ? n : 22;
+}
+
+export function registerRoutes(router: Router, ctx: PluginContext): void {
+  // The peer list is a full inventory of the NetBird network: admins only by
+  // default (peers.view, see manifest).
+  router.use(ctx.rbac.require("peers.view") as never);
 
   /**
    * @openapi
-   * /plugin-api/hello-world/notes:
+   * /plugin-api/netbird/peers:
    *   get:
-   *     summary: List the signed-in user's notes and the admin greeting
+   *     summary: List NetBird peers with an SSH reachability check
+   *     description: >
+   *       Reads peers and access policies from the configured NetBird management
+   *       API with the stored token and reports, per peer, whether a policy lets
+   *       the Termix server's own peer open TCP to the SSH port. Requires the
+   *       netbird.peers.view permission.
    *     tags:
-   *       - Hello World
+   *       - NetBird
    *     responses:
    *       200:
-   *         description: The greeting and the notes, newest first
+   *         description: Peers with reachability; configured=false when no token is set.
+   *       401:
+   *         description: NetBird rejected the API token.
+   *       502:
+   *         description: The NetBird management API could not be read.
    */
-  router.get("/notes", async (_req: Request, res: Response) => {
-    const db = await client();
-    const rows = await db
-      .select()
-      .from(notesTable)
-      .where(eq(notesTable.userId, actor()))
-      .orderBy(desc(notesTable.id));
-    const greeting = (await ctx.settings.get<string>("greeting")) ?? "Hello";
-    res.json({ greeting, notes: rows });
-  });
-
-  /**
-   * @openapi
-   * /plugin-api/hello-world/notes:
-   *   post:
-   *     summary: Add a note for the signed-in user
-   *     tags:
-   *       - Hello World
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               text:
-   *                 type: string
-   *     responses:
-   *       201:
-   *         description: Note added
-   *       400:
-   *         description: Missing or empty text
-   */
-  router.post("/notes", async (req: Request, res: Response) => {
-    const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
-    if (!text || text.length > 1000) {
-      return res.status(400).json({ error: "text is required" });
+  router.get("/peers", async (_req: Request, res: Response) => {
+    const token = ((await ctx.settings.get<string>("apiToken")) ?? "").trim();
+    if (!token) {
+      const empty: PeersResponse = {
+        configured: false,
+        termixPeer: null,
+        termixPeerMissing: false,
+        peers: [],
+      };
+      return res.json(empty);
     }
-    const db = await client();
-    // No returning(): MySQL does not support it.
-    await db.insert(notesTable).values({ userId: actor(), text });
-    // SQLite only reaches disk when asked.
-    await ctx.db.persist();
-    res.status(201).json({ success: true });
+
+    try {
+      const { peers, policies } = await loadPeersAndPolicies(ctx);
+      const sshPort = clampPort(await ctx.settings.get<number>("sshPort"));
+      const reference = (
+        (await ctx.settings.get<string>("termixPeer")) ?? ""
+      ).trim();
+      const termix = reference ? findPeer(peers, reference) : null;
+
+      const body: PeersResponse = {
+        configured: true,
+        termixPeer: termix?.name ?? null,
+        termixPeerMissing: reference.length > 0 && termix === null,
+        peers: peers
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            ip: (p.ip ?? "").split("/")[0],
+            dnsLabel: p.dns_label ?? "",
+            os: p.os ?? "",
+            connected: p.connected === true,
+            lastSeen: p.last_seen ?? null,
+            groups: (p.groups ?? [])
+              .map((g) => g.name)
+              .filter((n) => n !== "All"),
+            sshPort,
+            reachability: evaluate(policies, termix, p, sshPort),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      };
+      return res.json(body);
+    } catch (err) {
+      const status = err instanceof NetbirdApiError ? err.status : 502;
+      ctx.log.warn(
+        `NetBird peers could not be read: ${(err as Error).message}`,
+      );
+      const body: PeersResponse = {
+        configured: true,
+        termixPeer: null,
+        termixPeerMissing: false,
+        peers: [],
+        error: status === 401 ? "token" : "api",
+      };
+      return res.status(status === 401 ? 401 : 502).json(body);
+    }
   });
 }

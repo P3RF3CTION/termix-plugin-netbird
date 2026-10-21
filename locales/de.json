@@ -1,0 +1,71 @@
+{
+  "plugin": {
+    "name": "NetBird",
+    "description": "Zeigt die Peers deines NetBird-Netzes, legt sie als Hosts an und prüft, ob deine Zugriffsregeln Termix den SSH-Port erreichen lassen."
+  },
+  "nav": {
+    "netbird": "NetBird"
+  },
+  "panel": {
+    "search": "Peers durchsuchen",
+    "refresh": "Aktualisieren",
+    "loading": "Peers werden geladen …",
+    "notConfigured": "Hinterlege das NetBird-API-Token unter Einstellungen, Plugins, NetBird.",
+    "tokenRejected": "NetBird hat das API-Token abgelehnt.",
+    "apiError": "Die NetBird-Management-API war nicht lesbar.",
+    "empty": "Keine Peers in diesem NetBird-Netz.",
+    "noMatches": "Kein Peer passt zur Suche.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Zuletzt gesehen {{when}}",
+    "copyIp": "NetBird-IP kopieren",
+    "ipCopied": "NetBird-IP kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "addHost": "Als Host hinzufügen",
+    "termixPeer": "Geprüft vom Termix-Peer {{name}}",
+    "termixPeerMissing": "Der Termix-Peer aus den Einstellungen ist nicht in diesem Netz.",
+    "termixPeerUnset": "Trage den Termix-Peer in den Einstellungen ein, um die SSH-Erreichbarkeit zu prüfen.",
+    "self": "Das ist der Termix-Server"
+  },
+  "reach": {
+    "allowed": "SSH {{port}} erlaubt",
+    "allowedBy": "Erlaubt durch: {{policies}}",
+    "postureChecks": "Posture Checks greifen und können die Verbindung trotzdem sperren.",
+    "blocked": "Keine Regel erlaubt SSH {{port}}",
+    "blockedHint": "Keine NetBird-Regel lässt den Termix-Peer TCP {{port}} zu diesem Peer öffnen.",
+    "unknown": "Nicht geprüft"
+  },
+  "permissions": {
+    "peers": {
+      "view": {
+        "title": "NetBird-Peers ansehen",
+        "description": "Alle Peers des NetBird-Netzes, ihre Gruppen und die Regeln sehen, die sie erreichen."
+      }
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "NetBird-API",
+      "check": "Erreichbarkeitsprüfung"
+    },
+    "managementUrl": {
+      "label": "Management-URL",
+      "description": "Dein selbst gehosteter Management-Server, z. B. https://vpn.example.com. Leer lassen für NetBird Cloud.",
+      "placeholder": "https://api.netbird.io"
+    },
+    "apiToken": {
+      "label": "API-Token",
+      "description": "Ein Personal Access Token eines NetBird-Dienstkontos. Lesezugriff genügt; empfohlen ist die Rolle Auditor.",
+      "placeholder": "nbp_..."
+    },
+    "termixPeer": {
+      "label": "Termix-Peer",
+      "description": "Der NetBird-Peer, auf dem dieser Termix-Server läuft: Name, DNS-Label oder NetBird-IP. Grundlage der SSH-Erreichbarkeitsprüfung.",
+      "placeholder": "termix"
+    },
+    "sshPort": {
+      "label": "SSH-Port",
+      "description": "Port für die Erreichbarkeitsprüfung und neue Hosts."
+    }
+  }
+}
