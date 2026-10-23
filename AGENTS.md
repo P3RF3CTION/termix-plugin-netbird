@@ -97,7 +97,10 @@ aren't obvious from the code, and anything that has bitten you before.
   - A 403 on `/policies` (NetBird user roles) degrades to "not checked" instead of failing the list.
   - The check reads policies only. Posture checks are flagged, not evaluated.
 - Distribution: the repo is its own Termix plugin registry. `registry/index.json` is written by
-  `scripts/registry-index.mjs` (job `registry` in `release.yml`) from the signed release files;
+  `scripts/registry-index.mjs` (job `registry` in `release.yml`) from the signed release files.
+  Signing runs in this repo (job `sign`), not in the shared Termix-SSH release workflow:
+  `secrets: inherit` does not reach a workflow of another organisation, and the private key should
+  not go to code on `@main` of a foreign repo;
   `registry/public-key.txt` is the public half of `TERMIX_PLUGIN_SIGNING_KEY` (repo secret, key
   ID `f693b96cabb971be`). Never edit the index by hand. A new key means every installation has
   to add the registry again.
