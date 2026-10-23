@@ -1,52 +1,198 @@
 {
-  "id": "hello-world",
-  "name": "Hello World",
-  "version": "1.0.0",
-  "description": "A minimal Termix plugin: one tab, one route, one setting and one table.",
+  "id": "netbird",
+  "name": "NetBird",
+  "version": "1.1.0",
+  "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
   "author": {
-    "name": "Your Name"
+    "name": "Maximilian Herz",
+    "url": "https://github.com/P3RF3CTION"
   },
   "license": "Apache-2.0",
-  "repository": "https://github.com/your-org/termix-plugin-hello-world",
-  "docs": "https://github.com/your-org/termix-plugin-hello-world/tree/main/docs",
-  "category": "Productivity",
-  "icon": "Hand",
+  "repository": "https://github.com/P3RF3CTION/termix-plugin-netbird",
+  "docs": "https://github.com/P3RF3CTION/termix-plugin-netbird/tree/main/docs",
+  "category": "Networking",
+  "icon": "Network",
   "features": [
-    "A tab opened from the sidebar",
-    "An admin setting",
-    "A table of greetings"
+    "Lists NetBird peers with NetBird IP, DNS name, OS, groups and online state",
+    "Single sign-on with any OpenID Connect provider (code flow with PKCE), so each user sees what NetBird lets them see",
+    "Service user token or a personal access token per user as an alternative",
+    "Select peers and add them as hosts in one go, into a folder, with a saved credential; existing hosts are skipped",
+    "Peer details: client version, location, login expiry, accessible peers",
+    "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
+    "Works with NetBird Cloud and self-hosted management servers"
   ],
   "env": [],
   "engine": {
-    "termix": ">=26.10.0",
-    "api": "^1.2"
+    "termix": ">=26.10.3",
+    "api": "^1.8"
   },
-  "capabilities": ["db:own", "network:serve", "ui:surface"],
+  "capabilities": [
+    "network:outbound",
+    "network:serve",
+    "ui:surface",
+    "hosts:read",
+    "hosts:write",
+    "kv:own",
+    "secrets:own",
+    "credentials:use"
+  ],
   "contributes": {
-    "tabs": [
+    "panels": [
       {
-        "id": "hello-world",
-        "titleKey": "tab.title",
-        "icon": "Hand",
-        "openFrom": ["rail"]
+        "id": "netbird",
+        "titleKey": "nav.netbird",
+        "icon": "Network"
       }
     ],
     "permissions": [
       {
-        "name": "use",
-        "titleKey": "permissions.use.title",
-        "descriptionKey": "permissions.use.description",
-        "defaultRoles": ["admin", "user"]
+        "name": "peers.view",
+        "titleKey": "permissions.peers.view.title",
+        "descriptionKey": "permissions.peers.view.description",
+        "defaultRoles": ["admin"]
+      },
+      {
+        "name": "peers.import",
+        "titleKey": "permissions.peers.import.title",
+        "descriptionKey": "permissions.peers.import.description",
+        "defaultRoles": ["admin"]
       }
     ],
     "settings": {
       "admin": [
         {
-          "key": "greeting",
+          "key": "managementUrl",
           "type": "string",
-          "labelKey": "settings.admin.greeting.label",
-          "descriptionKey": "settings.admin.greeting.description",
-          "default": "Hello"
+          "labelKey": "settings.managementUrl.label",
+          "descriptionKey": "settings.managementUrl.description",
+          "placeholderKey": "settings.managementUrl.placeholder",
+          "default": "",
+          "group": "settings.group.api"
+        },
+        {
+          "key": "authMode",
+          "type": "select",
+          "labelKey": "settings.authMode.label",
+          "descriptionKey": "settings.authMode.description",
+          "default": "service",
+          "options": [
+            {
+              "value": "service",
+              "labelKey": "settings.authMode.service"
+            },
+            {
+              "value": "user-or-service",
+              "labelKey": "settings.authMode.userOrService"
+            },
+            {
+              "value": "user",
+              "labelKey": "settings.authMode.user"
+            }
+          ],
+          "group": "settings.group.api"
+        },
+        {
+          "key": "apiToken",
+          "type": "secret",
+          "labelKey": "settings.apiToken.label",
+          "descriptionKey": "settings.apiToken.description",
+          "placeholderKey": "settings.apiToken.placeholder",
+          "group": "settings.group.api"
+        },
+        {
+          "key": "oidcIssuer",
+          "type": "string",
+          "labelKey": "settings.oidcIssuer.label",
+          "descriptionKey": "settings.oidcIssuer.description",
+          "placeholderKey": "settings.oidcIssuer.placeholder",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcClientId",
+          "type": "string",
+          "labelKey": "settings.oidcClientId.label",
+          "descriptionKey": "settings.oidcClientId.description",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcClientSecret",
+          "type": "secret",
+          "labelKey": "settings.oidcClientSecret.label",
+          "descriptionKey": "settings.oidcClientSecret.description",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcScopes",
+          "type": "string",
+          "labelKey": "settings.oidcScopes.label",
+          "descriptionKey": "settings.oidcScopes.description",
+          "default": "openid profile email offline_access",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcAudience",
+          "type": "string",
+          "labelKey": "settings.oidcAudience.label",
+          "descriptionKey": "settings.oidcAudience.description",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcExtraParams",
+          "type": "string",
+          "labelKey": "settings.oidcExtraParams.label",
+          "descriptionKey": "settings.oidcExtraParams.description",
+          "placeholderKey": "settings.oidcExtraParams.placeholder",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcUseIdToken",
+          "type": "boolean",
+          "labelKey": "settings.oidcUseIdToken.label",
+          "descriptionKey": "settings.oidcUseIdToken.description",
+          "default": false,
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "termixPeer",
+          "type": "string",
+          "labelKey": "settings.termixPeer.label",
+          "descriptionKey": "settings.termixPeer.description",
+          "placeholderKey": "settings.termixPeer.placeholder",
+          "default": "",
+          "group": "settings.group.check"
+        },
+        {
+          "key": "sshPort",
+          "type": "number",
+          "labelKey": "settings.sshPort.label",
+          "descriptionKey": "settings.sshPort.description",
+          "default": 22,
+          "min": 1,
+          "max": 65535,
+          "group": "settings.group.check"
+        },
+        {
+          "key": "checkPorts",
+          "type": "string",
+          "labelKey": "settings.checkPorts.label",
+          "descriptionKey": "settings.checkPorts.description",
+          "placeholderKey": "settings.checkPorts.placeholder",
+          "default": "",
+          "group": "settings.group.check"
+        }
+      ],
+      "user": [
+        {
+          "key": "userApiToken",
+          "type": "secret",
+          "labelKey": "settings.userApiToken.label",
+          "descriptionKey": "settings.userApiToken.description",
+          "placeholderKey": "settings.apiToken.placeholder",
+          "group": "settings.group.api"
         }
       ]
     }

@@ -2,139 +2,126 @@
 
 <img src="https://termix.site/img/logo.svg" width="120" alt="Termix Logo" />
 
-<h1>Termix Plugin Template</h1>
+<h1>NetBird for Termix</h1>
 
-<p>A starter template for building your own Termix plugin</p>
-
-</div>
-
-<br />
-
-## Overview
-
-[Termix](https://github.com/Termix-SSH/Termix) is self-hosted, plugin-based server management, and every feature outside the core is a plugin. This template is a small Hello World plugin you can copy to start your own. It has one of each thing most plugins need, set up the same way as the official plugins.
-
-<br />
-
-## Features
-
-- A tab opened from the sidebar
-- Two API routes behind a permission
-- An admin setting
-- A table with migrations for SQLite, PostgreSQL and MySQL
-- Backend and frontend tests
-- A release workflow that builds and publishes your plugin as a GitHub release, ready to submit to the [community registry](https://github.com/Termix-SSH/Termix-Registry)
-
-<br />
-
-## Getting Started
-
-You need Node 24 and a Termix server you are an admin on. The full guide is at [docs.termix.site/develop](https://docs.termix.site/develop).
-
-1. Click Use this template on GitHub to make your own repo, then clone it.
-2. In `manifest.json`, change `id`, `name`, `description`, `author`, `repository` and `docs`. The id is lowercase with dashes, like `my-plugin`. Then search the repo for `hello-world`, `hello_world` and `Hello World` and rename them to match: `package.json`, `locales/en.json`, the index name in `src/backend/tables.ts`, the API paths in `src/backend/routes.ts`, the tab id in `src/frontend/index.tsx` and the tests.
-3. Install the packages, then delete `migrations/` and write it again for your id:
-
-   ```bash
-   npm install
-   npm run migrations
-   ```
-
-4. In Termix, open Settings, then General, and turn on Plugin developer mode. Then make an API key under Settings, API keys.
-5. Build and install the plugin on your server. It rebuilds and reinstalls every time you save a file:
-
-   ```bash
-   npx termix-plugin dev --server http://localhost:30001 --key tmx_your_key
-   ```
-
-6. Run the tests and checks before you push:
-
-   ```bash
-   npm test
-   npm run typecheck
-   npm run validate
-   npm run build
-   ```
-
-7. Using an AI coding tool? It reads `AGENTS.md` (or `CLAUDE.md`), which points it to the full plugin guide that ships with the SDK. Keep the About this plugin section in `AGENTS.md` up to date.
-
-8. Write your docs in `docs/`. `docs/index.md` is the page people see first. Settings, permissions, environment variables and the API reference are added for you from `manifest.json` and the `@openapi` comments on your routes.
-
-When you change a table in `src/backend/tables.ts`, run `npm run migrations` to write the SQLite, PostgreSQL and MySQL migrations. `npm run pack` writes `<id>-<version>.tmxplug` of the built plugin, which you can install from a file in the Plugins tab while developer mode is on.
-
-## Releasing
-
-Work happens on a `dev-X.Y.Z` branch made from `main`, named after the version it will ship as. `main` only changes when a release merges a dev branch into it.
-
-Run the Release workflow by hand from the dev branch:
-
-- beta publishes `X.Y.Z-beta.N` (N counts up on its own). Termix only offers it to people who turned on Beta versions for this plugin. Run it as often as you like.
-- stable releases `X.Y.Z`, merges the dev branch into `main`, deletes the dev branch and removes that version's beta releases. Add a `## X.Y.Z` section to `CHANGELOG.md` first, it becomes the release notes.
-- overwrite releases the manifest version again from the current commit, replacing its files.
-- dry-run builds and packs without publishing anything.
-
-No secrets are needed. The workflow records GitHub build provenance for the `.tmxplug` so the community registry can check where it was built. If a dev branch changes files in `.github/workflows`, add a `TERMIX_PAT` secret (a token with `repo` and `workflow` scopes) so the release can push it to `main`.
-
-## Submitting to the community registry
-
-Once a version is released, you can submit it to the [Termix community registry](https://github.com/Termix-SSH/Termix-Registry). The Release run's summary shows the `sha256` to put in your submission. Every version is reviewed by a person before it is listed. See the [guide](https://docs.termix.site/develop/community-registry).
-
-Once it is listed, admins who turn on the community registry in Plugins, Registries can install it from Browse.
-
-## Sponsors
-
-For a paid sponsor spot, email [mail@termix.site](mailto:mail@termix.site).
-
-<!-- SPONSORS:START -->
-
-<div align="center">
-
-<br />
-
-<a href="https://www.blacksmith.sh/">
-  <img src="https://termix.site/img/sponsors/blacksmith.svg" height="40" alt="Blacksmith" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.cloudflare.com/">
-  <img src="https://termix.site/img/sponsors/cloudflare.png" height="40" alt="Cloudflare" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://akamai.com/">
-  <img src="https://termix.site/img/sponsors/akamai.svg" height="40" alt="Akamai" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://aws.amazon.com/">
-  <img src="https://termix.site/img/sponsors/aws.png" height="40" alt="AWS" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://rackgenius.com/">
-  <img src="https://termix.site/img/sponsors/rackgenius.png" height="40" alt="Rack Genius" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://ginernet.com/">
-  <img src="https://termix.site/img/sponsors/ginernet.png" height="40" alt="Ginernet" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.hetzner.com/?mtm_campaign=termix&mtm_medium=referral&mtm_content=sponsoring_link">
-  <img src="https://termix.site/img/sponsors/hetzner.png" height="40" alt="Hetzner" />
-</a>
+<p>See your NetBird peers in Termix, sign in with your own identity provider, add peers as hosts in bulk and find out which policy lets Termix reach them</p>
 
 </div>
 
-<!-- SPONSORS:END -->
+<br />
+
+## What it does
+
+[NetBird](https://netbird.io) connects your machines in a private network. [Termix](https://github.com/Termix-SSH/Termix) is where you open SSH sessions to them. This plugin connects the two:
+
+- **Peer list.** A NetBird panel in the Termix sidebar lists every peer with its NetBird IP, DNS label, operating system, groups and online state. Search it, copy an IP, refresh.
+- **Sign in your way.** A shared, read-only service token, each user's own NetBird token, or single sign-on with any OpenID Connect provider NetBird trusts (NetBird's built-in IdP, Keycloak, Zitadel, Authentik, Entra ID, Auth0 …). With an own sign-in, every user sees NetBird with their own NetBird permissions.
+- **Add hosts, one or many.** One click opens the host editor with name, NetBird IP and SSH port filled in. Or tick several peers and add them in one go, into a folder, with username, port, a saved login and tags from the NetBird groups. Peers that already are a host are skipped.
+- **Peer details.** NetBird version, system, public address and location, login expiry, approval state, NetBird SSH server and DNS names.
+- **Reachability and why.** For each peer the plugin reads your NetBird access policies and tells you whether the Termix server may open its SSH port, and which rule allows it. The details also list rules on other ports and matching rules that are switched off. You know why a connection fails before you read a timeout.
+
+It works with NetBird Cloud and with a self-hosted management server. It only reads from NetBird and changes nothing there.
 
 <br />
 
-## Support
+## Requirements
 
-Bugs and ideas for the template go in this repo: [report a bug](https://github.com/Termix-SSH/Termix-Plugin-Template/issues/new?template=bug_report.yml) or [request a feature](https://github.com/Termix-SSH/Termix-Plugin-Template/issues/new?template=feature_request.yml).
+- Termix 26.10.3 or newer, and an admin account in it
+- A NetBird network (Cloud or self-hosted), and either the right to create a service user there or an identity provider NetBird signs in with
+- For the reachability check: the Termix server is itself a NetBird peer
 
-Problems with Termix itself (login, hosts, credentials, sharing, sync) go in the [Termix repo](https://github.com/Termix-SSH/Termix/issues/new/choose). Not sure where it goes? Open it there and it will be moved.
+<br />
 
-Add as much detail as you can, in English if possible. For questions about building plugins, join the [Discord](https://discord.gg/jVQGdvHDrf) server.
+## Install
+
+**From the plugin list.** In Termix, open **Plugins**, search for **NetBird** and install it.
+
+> The plugin is not in the community registry yet. Until it is, use the file install below.
+
+**From a file.** Download `netbird-<version>.tmxplug` from the [Releases](https://github.com/P3RF3CTION/termix-plugin-netbird/releases) page and install it in Termix under **Plugins, Install from file**. Termix marks a file install as unverified. Before you install, compare the file's `sha256` with the one in the release notes.
+
+<br />
+
+## Set it up
+
+In Termix, open **Settings, Plugins, NetBird**. The full guide, including single sign-on per identity provider, is in [docs/index.md](docs/index.md).
+
+| Setting                  | What to enter                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Management URL           | Your self-hosted server, for example `https://vpn.example.com`. Leave it empty for NetBird Cloud.                                                   |
+| Sign-in mode             | Service token for everyone (default), own sign-in with the service token as fallback, or own sign-in only.                                          |
+| Service token            | A personal access token of a read-only NetBird service user (Auditor role if available). Stored encrypted, never sent to the browser.               |
+| Issuer URL, Client ID    | For single sign-on: the OpenID Connect issuer and a client whose tokens NetBird accepts. Register the redirect URI the panel shows at the provider. |
+| Termix peer              | The peer the Termix server runs on: name, DNS label or NetBird IP. Without it the reachability check is skipped.                                    |
+| SSH port, Ports to check | The port to check and to put into new hosts (default `22`), and more ports for the details.                                                         |
+
+Users can also enter their **own NetBird access token** in their personal plugin settings.
+
+Two permissions decide who may do what: **View NetBird peers** (the panel) and **Import NetBird peers as hosts**. Only admins have them by default, because with a service token the list shows your whole network.
+
+<br />
+
+## Use it
+
+Open **NetBird** in the sidebar. With an own sign-in mode, click **Sign in with SSO** first. Each peer shows a badge:
+
+| Badge                         | Meaning                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **SSH 22 allowed**            | At least one enabled policy lets the Termix peer open TCP 22 to this peer. Hover to see which policies.  |
+| **No policy allows SSH 22**   | No enabled policy fits. Add a policy from a group of the Termix peer to a group of this peer for TCP 22. |
+| **Not checked**               | No Termix peer is set, it was not found, or your NetBird account may not read policies.                  |
+| **This is the Termix server** | The peer Termix runs on.                                                                                 |
+| **Host exists**               | The peer's NetBird IP and SSH port are already one of your hosts.                                        |
+
+Tick peers and click **Add selected as hosts** to add them in bulk. **Details** opens the peer details and the access explanation.
+
+The check reads the policies; it does not open a connection. A connection the policies allow can still fail when the peer is offline, a firewall on the host blocks the port, or a posture check fails.
+
+<br />
+
+## Troubleshooting
+
+| Message                                                      | What to do                                                                                                        |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| _Set a NetBird token … or ask your admin to set up sign-in._ | No service token and no own sign-in. See [Set it up](#set-it-up).                                                 |
+| _Sign in to NetBird to see your peers._                      | The sign-in mode needs an own sign-in. Click **Sign in with SSO** or set your own token.                          |
+| _NetBird rejected the credential._                           | The token is wrong, expired or deleted, or NetBird does not accept tokens from this issuer or client.             |
+| _Sign-in failed. The Termix log has the reason._             | Usually the redirect URI is not registered, refresh tokens are not allowed for the client, or the issuer differs. |
+| _The NetBird management API could not be read._              | Check the Management URL, and that the Termix server can reach it (DNS, firewall, TLS certificate).               |
+| _The Termix peer from the settings is not in this network._  | Check the spelling. Name, DNS label and NetBird IP all work. The peer must be visible to the account in use.      |
+| The NetBird panel or the import is missing                   | Your role lacks **View NetBird peers** or **Import NetBird peers as hosts**, or the plugin is disabled.           |
+
+<br />
+
+## Privacy and security
+
+- The plugin talks only to the Management URL and the identity provider you set. No telemetry, no other servers.
+- It reads NetBird peers and policies and never writes to NetBird.
+- Single sign-on uses the authorization code flow with PKCE, a nonce and a single-use state. The refresh token is stored encrypted per user; the access token stays in server memory. **Sign out** deletes both.
+- Hosts are created only on an explicit import, as the user who imports them, and only for peers that user's NetBird sign-in can see. The plugin sees names and usernames of saved logins, never their secrets.
+- The service token is stored encrypted on the Termix server and never sent to the browser. If it leaks, it reveals your peers and policies; revoke it in NetBird.
+
+Capabilities the plugin asks for:
+
+| Capability                  | Why                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `network:outbound`          | Read the NetBird management API and talk to the identity provider                                  |
+| `network:serve`             | The panel's routes, behind the plugin's permissions; the sign-in callback takes a single-use state |
+| `ui:surface`                | The sidebar panel                                                                                  |
+| `hosts:read`, `hosts:write` | Mark peers that already are a host, and create hosts on import                                     |
+| `credentials:use`           | Offer the user's saved logins (name and username) in the import                                    |
+| `kv:own`, `secrets:own`     | Sign-in state and the encrypted refresh token                                                      |
+
+Found a security problem? Please report it privately through [GitHub security advisories](https://github.com/P3RF3CTION/termix-plugin-netbird/security/advisories/new), not in a public issue.
+
+<br />
+
+## Contributing
+
+Bug reports and ideas are welcome as [issues](https://github.com/P3RF3CTION/termix-plugin-netbird/issues). For development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <br />
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
+Apache-2.0. Not affiliated with NetBird GmbH; "NetBird" names the service this plugin connects to.

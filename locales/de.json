@@ -1,0 +1,189 @@
+{
+  "plugin": {
+    "name": "NetBird",
+    "description": "Listet die Peers deines NetBird-Netzes, meldet dich über deinen Identity Provider oder ein Token an, übernimmt Peers als Hosts und erklärt, welche Zugriffsrichtlinie Termix den Zugang erlaubt."
+  },
+  "nav": {
+    "netbird": "NetBird"
+  },
+  "panel": {
+    "search": "Peers durchsuchen",
+    "refresh": "Aktualisieren",
+    "loading": "Peers werden geladen…",
+    "notConfigured": "Hinterlege ein NetBird-Token unter Einstellungen, Plugins, NetBird, oder bitte deinen Admin, die Anmeldung einzurichten.",
+    "tokenRejected": "NetBird hat die Anmeldedaten abgelehnt. Melde dich erneut an oder prüfe das Token.",
+    "apiError": "Die NetBird-Management-API konnte nicht gelesen werden.",
+    "empty": "In diesem NetBird-Netz gibt es keine Peers.",
+    "noMatches": "Kein Peer passt zur Suche.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Zuletzt gesehen {{when}}",
+    "copyIp": "NetBird-IP kopieren",
+    "ipCopied": "NetBird-IP kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "addHost": "Als Host anlegen",
+    "termixPeer": "Geprüft vom Termix-Peer {{name}}",
+    "termixPeerMissing": "Der Termix-Peer aus den Einstellungen ist nicht in diesem Netz.",
+    "termixPeerUnset": "Lege in den Einstellungen den Termix-Peer fest, um die SSH-Erreichbarkeit zu prüfen.",
+    "self": "Das ist der Termix-Server",
+    "signInNeeded": "Melde dich bei NetBird an, um deine Peers zu sehen.",
+    "policiesHidden": "Dein NetBird-Konto darf die Zugriffsrichtlinien vermutlich nicht lesen, daher wird die Erreichbarkeit nicht geprüft.",
+    "selectAll": "Alle angezeigten auswählen",
+    "selected": "{{count}} ausgewählt",
+    "importSelected": "Auswahl als Hosts anlegen",
+    "imported": "Host vorhanden",
+    "details": "Details",
+    "hideDetails": "Details ausblenden",
+    "selectPeer": "{{name}} auswählen"
+  },
+  "reach": {
+    "allowed": "SSH {{port}} erlaubt",
+    "allowedBy": "Erlaubt durch: {{policies}}",
+    "postureChecks": "Es gelten Posture Checks, die die Verbindung trotzdem blockieren können.",
+    "blocked": "Keine Richtlinie erlaubt SSH {{port}}",
+    "blockedHint": "Keine NetBird-Richtlinie erlaubt dem Termix-Peer TCP {{port}} zu diesem Peer.",
+    "unknown": "Nicht geprüft"
+  },
+  "permissions": {
+    "peers": {
+      "view": {
+        "title": "NetBird-Peers anzeigen",
+        "description": "Alle Peers des NetBird-Netzes, ihre Gruppen und die Richtlinien sehen, die sie erreichen."
+      },
+      "import": {
+        "title": "NetBird-Peers als Hosts übernehmen",
+        "description": "Ausgewählte NetBird-Peers als Hosts des Nutzers anlegen."
+      }
+    }
+  },
+  "settings": {
+    "group": {
+      "api": "NetBird-API",
+      "check": "Erreichbarkeitsprüfung",
+      "sso": "Single Sign-on (OpenID Connect)"
+    },
+    "managementUrl": {
+      "label": "Management-URL",
+      "description": "Dein selbst betriebener Management-Server, zum Beispiel https://vpn.example.com. Für NetBird Cloud leer lassen.",
+      "placeholder": "https://api.netbird.io"
+    },
+    "apiToken": {
+      "label": "Service-Token",
+      "description": "Ein Personal Access Token eines NetBird-Service-Users. Gilt im Modus „Service-Token“ für alle und im Modus „Eigene Anmeldung, sonst Service-Token“ als Rückfall. Lesezugriff genügt, empfohlen ist eine Auditor-Rolle.",
+      "placeholder": "nbp_..."
+    },
+    "termixPeer": {
+      "label": "Termix-Peer",
+      "description": "Der NetBird-Peer, auf dem dieser Termix-Server läuft: Name, DNS-Label oder NetBird-IP. Wird für die SSH-Erreichbarkeitsprüfung genutzt.",
+      "placeholder": "termix"
+    },
+    "sshPort": {
+      "label": "SSH-Port",
+      "description": "Der Port für die Erreichbarkeitsprüfung und für neue Hosts."
+    },
+    "authMode": {
+      "label": "Anmeldemodus",
+      "description": "Als wer das Plugin mit NetBird spricht. Bei eigener Anmeldung wendet NetBird die Berechtigungen des jeweiligen Nutzers an.",
+      "service": "Service-Token für alle",
+      "userOrService": "Eigene Anmeldung (SSO oder eigenes Token), sonst Service-Token",
+      "user": "Nur eigene Anmeldung (SSO oder eigenes Token)"
+    },
+    "oidcIssuer": {
+      "label": "Issuer-URL",
+      "description": "Der OpenID-Connect-Issuer, dessen Tokens dein NetBird-Management-Server akzeptiert, zum Beispiel der eingebaute IdP (https://vpn.example.com/oauth2) oder dein Keycloak-, Zitadel-, Authentik- oder Entra-ID-Realm. Leer lassen schaltet Single Sign-on ab.",
+      "placeholder": "https://vpn.example.com/oauth2"
+    },
+    "oidcClientId": {
+      "label": "Client-ID",
+      "description": "Ein Client, dessen Tokens NetBird akzeptiert (die Audience), meist der Client des NetBird-Dashboards. Trage dort die Redirect-URI ein, die das NetBird-Panel anzeigt."
+    },
+    "oidcClientSecret": {
+      "label": "Client-Secret",
+      "description": "Nur für einen vertraulichen Client. Für einen öffentlichen Client mit PKCE leer lassen."
+    },
+    "oidcScopes": {
+      "label": "Scopes",
+      "description": "offline_access liefert ein Refresh-Token, damit Nutzer angemeldet bleiben."
+    },
+    "oidcAudience": {
+      "label": "Audience",
+      "description": "Optionaler audience-Parameter, den manche Anbieter (Auth0) brauchen, um ein API-Token für NetBird auszustellen."
+    },
+    "oidcExtraParams": {
+      "label": "Zusätzliche Autorisierungsparameter",
+      "description": "Optional, als key=value&key=value. Zum Beispiel connector_id=<id>, um bei einem Dex-basierten IdP die Auswahl des Connectors zu überspringen.",
+      "placeholder": "connector_id=keycloak"
+    },
+    "oidcUseIdToken": {
+      "label": "ID-Token senden",
+      "description": "Statt des Access-Tokens das ID-Token an NetBird senden. Nur für Setups, in denen NetBird ID-Tokens prüft."
+    },
+    "checkPorts": {
+      "label": "Zu prüfende Ports",
+      "description": "Weitere Ports für die Zugriffserklärung in den Peer-Details, durch Kommas getrennt, zum Beispiel 3389, 5900 für RDP und VNC.",
+      "placeholder": "3389, 5900"
+    },
+    "userApiToken": {
+      "label": "Dein NetBird-Access-Token",
+      "description": "Dein eigenes NetBird Personal Access Token. Wird genutzt, wenn du nicht per SSO angemeldet bist und der Anmeldemodus eine eigene Anmeldung erlaubt."
+    }
+  },
+  "auth": {
+    "signInSso": "Mit SSO anmelden",
+    "signOut": "Abmelden",
+    "signedInAs": "Angemeldet als {{name}}",
+    "signedIn": "Per SSO angemeldet",
+    "usingUserToken": "Dein eigenes NetBird-Token wird verwendet",
+    "usingService": "Das gemeinsame Service-Token wird verwendet",
+    "popupBlocked": "Das Anmeldefenster wurde blockiert. Erlaube Pop-ups für Termix und versuche es erneut.",
+    "failed": "Anmeldung fehlgeschlagen.",
+    "notConfigured": "Single Sign-on ist nicht eingerichtet. Ein Admin kann den Identity Provider in den Plugin-Einstellungen eintragen.",
+    "redirectUri": "Beim Identity Provider einzutragende Redirect-URI: {{uri}}",
+    "orToken": "Oder hinterlege dein eigenes NetBird-Access-Token in deinen Plugin-Einstellungen."
+  },
+  "import": {
+    "title": "{{count}} Peers als Hosts anlegen",
+    "folder": "Ordner",
+    "folderPlaceholder": "NetBird",
+    "username": "Benutzername",
+    "port": "SSH-Port",
+    "credential": "Anmeldung",
+    "credentialNone": "Keine, später im Host festlegen",
+    "tagGroups": "Hosts mit ihren NetBird-Gruppen taggen",
+    "start": "Hosts anlegen",
+    "cancel": "Abbrechen",
+    "result": "{{created}} angelegt, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
+    "error": "Die Hosts konnten nicht angelegt werden."
+  },
+  "detail": {
+    "loading": "Details werden geladen…",
+    "error": "Die Details konnten nicht geladen werden.",
+    "version": "NetBird-Version",
+    "os": "System",
+    "hostname": "Hostname",
+    "connectionIp": "Öffentliche Adresse",
+    "location": "Standort",
+    "lastLogin": "Letzte Anmeldung",
+    "loginExpiry": "Ablauf der Anmeldung",
+    "loginExpired": "Anmeldung abgelaufen: Der Peer muss sich neu anmelden",
+    "loginExpiryOn": "An",
+    "loginExpiryOff": "Aus",
+    "approval": "Wartet auf Freigabe",
+    "ephemeral": "Kurzlebiger Peer",
+    "sshServer": "NetBird-SSH-Server",
+    "on": "An",
+    "off": "Aus",
+    "accessible": "Erreichbare Peers",
+    "dnsLabels": "DNS-Namen",
+    "access": "Zugriff vom Termix-Peer",
+    "portAllowed": "Port {{port}} erlaubt durch",
+    "portBlocked": "Port {{port}}: keine Regel erlaubt ihn",
+    "portUnknown": "Port {{port}}: nicht geprüft",
+    "otherPorts": "Regeln zwischen diesen Peers auf anderen Ports",
+    "disabled": "Passende Regeln, die abgeschaltet sind",
+    "ruleLine": "{{policy}} · {{protocol}} {{ports}}",
+    "reverse": "über bidirektionale Regel",
+    "posture": "Posture Checks gelten",
+    "noTermixPeer": "Lege in den Einstellungen den Termix-Peer fest, um zu sehen, welche Richtlinie diesen Peer erreicht."
+  }
+}
