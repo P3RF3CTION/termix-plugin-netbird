@@ -38,12 +38,49 @@ jobs:
     with:
       channel: ${{ inputs.channel }}
       mode: ${{ inputs.mode }}
+    # Bewusst ohne TERMIX_PLUGIN_SIGNING_KEY: "secrets: inherit" erreicht
+    # einen Workflow einer anderen Organisation ohnehin nicht, und der
+    # private Schluessel soll nicht an Code gehen, der auf @main eines
+    # fremden Repos steht. Signiert wird im Job "sign" unten.
     secrets: inherit
+
+  # Signs the file the release job attached, with this repo's own key and the
+  # SDK version from package-lock.json, and attaches the .sig.
+  sign:
+    needs: release
+    if: ${{ inputs.mode != 'dry-run' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install the SDK
+        env:
+          HUSKY: "0"
+        run: npm ci --ignore-scripts
+      - name: Sign the release file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TERMIX_PLUGIN_SIGNING_KEY: ${{ secrets.TERMIX_PLUGIN_SIGNING_KEY }}
+        run: |
+          if [ -z "$TERMIX_PLUGIN_SIGNING_KEY" ]; then
+            echo "::error::TERMIX_PLUGIN_SIGNING_KEY is not set"
+            exit 1
+          fi
+          tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+          mkdir -p signed
+          gh release download "$tag" --pattern '*.tmxplug' --dir signed --clobber
+          npx termix-plugin sign signed/*.tmxplug
+          npx termix-plugin verify signed/*.tmxplug --key "$(cat registry/public-key.txt)"
+          gh release upload "$tag" signed/*.tmxplug.sig --clobber
 
   # Rebuilds registry/index.json, the index Termix reads when this repo is
   # added as a plugin registry, from the signed release files.
   registry:
-    needs: release
+    needs: sign
     if: ${{ inputs.mode != 'dry-run' }}
     runs-on: ubuntu-latest
     steps:
