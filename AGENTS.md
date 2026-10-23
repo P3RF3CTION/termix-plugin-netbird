@@ -96,5 +96,10 @@ aren't obvious from the code, and anything that has bitten you before.
     on, and servers often run with `--disable-dns`.
   - A 403 on `/policies` (NetBird user roles) degrades to "not checked" instead of failing the list.
   - The check reads policies only. Posture checks are flagged, not evaluated.
+- Distribution: the repo is its own Termix plugin registry. `registry/index.json` is written by
+  `scripts/registry-index.mjs` (job `registry` in `release.yml`) from the signed release files;
+  `registry/public-key.txt` is the public half of `TERMIX_PLUGIN_SIGNING_KEY` (repo secret, key
+  ID `f693b96cabb971be`). Never edit the index by hand. A new key means every installation has
+  to add the registry again.
 - Not yet: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes,
   writing to NetBird.

@@ -34,11 +34,28 @@ It works with NetBird Cloud and with a self-hosted management server. It only re
 
 ## Install
 
-**From the plugin list.** In Termix, open **Plugins**, search for **NetBird** and install it.
+**From this repository's registry (recommended).** This repository is a Termix plugin registry of its own. Add it once, and Termix offers the plugin in the plugin list and installs updates like any other plugin:
 
-> The plugin is not in the community registry yet. Until it is, use the file install below.
+1. In Termix, open **Plugins**, then the **Registries** tab, and click **Add registry**.
+2. Paste this URL:
 
-**From a file.** Download `netbird-<version>.tmxplug` from the [Releases](https://github.com/P3RF3CTION/termix-plugin-netbird/releases) page and install it in Termix under **Plugins, Install from file**. Termix marks a file install as unverified. Before you install, compare the file's `sha256` with the one in the release notes.
+   ```
+   https://raw.githubusercontent.com/P3RF3CTION/termix-plugin-netbird/main/registry/index.json
+   ```
+
+3. Termix reads the index and shows the key the releases are signed with. Add the registry only if the key ID matches:
+
+   | Key ID             | Public key                                     |
+   | ------------------ | ---------------------------------------------- |
+   | `f693b96cabb971be` | `EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=` |
+
+4. Open **Plugins**, search for **NetBird** and install it.
+
+Termix pins that key. Every release it installs from this registry must carry a valid signature by it, and Termix does not follow a key change in the index.
+
+**From a file.** Download `netbird-<version>.tmxplug` from the [Releases](https://github.com/P3RF3CTION/termix-plugin-netbird/releases) page and install it in Termix under **Plugins, Install from file** (needs developer mode). Termix marks a file install as unverified. Before you install, compare the file's `sha256` with the one in [registry/index.json](registry/index.json) or check the signature with `npx termix-plugin verify netbird-<version>.tmxplug --key EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=`.
+
+The plugin is not in the Termix community registry yet.
 
 <br />
 

@@ -16,7 +16,7 @@ const peers = [
   {
     id: "p-termix",
     name: "termix",
-    ip: "100.79.103.251",
+    ip: "100.64.0.10",
     connected: true,
     groups: [
       { id: "g-all", name: "All" },
@@ -24,15 +24,15 @@ const peers = [
     ],
   },
   {
-    id: "p-oracle",
-    name: "oracle-2",
-    ip: "100.79.185.105",
+    id: "p-cloud",
+    name: "cloud-1",
+    ip: "100.64.0.20",
     os: "Ubuntu 26.04",
     connected: true,
     last_seen: "2026-10-21T09:00:00Z",
     groups: [
       { id: "g-all", name: "All" },
-      { id: "g-o", name: "Oracle" },
+      { id: "g-o", name: "Cloud" },
     ],
   },
 ];
@@ -48,7 +48,7 @@ const policies = [
         protocol: "tcp",
         ports: ["2222"],
         sources: [{ id: "g-t", name: "Termix" }],
-        destinations: [{ id: "g-o", name: "Oracle" }],
+        destinations: [{ id: "g-o", name: "Cloud" }],
       },
     ],
   },
@@ -126,12 +126,12 @@ describe("GET /peers", () => {
     const res = await get("/peers");
     expect(res.status).toBe(200);
     expect(res.body.termixPeer).toBe("termix");
-    const oracle = res.body.peers.find(
-      (p: { id: string }) => p.id === "p-oracle",
+    const cloud = res.body.peers.find(
+      (p: { id: string }) => p.id === "p-cloud",
     );
-    expect(oracle).toMatchObject({
-      ip: "100.79.185.105",
-      groups: ["Oracle"],
+    expect(cloud).toMatchObject({
+      ip: "100.64.0.20",
+      groups: ["Cloud"],
       sshPort: 2222,
       reachability: { state: "allowed", policies: ["Termix zu Oracle (SSH)"] },
     });
