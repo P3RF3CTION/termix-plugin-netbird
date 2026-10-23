@@ -60,20 +60,41 @@ file per theme scoped under `.<id>`). A theme only plugin has no `src/`: just `m
 Keep this section current when the plugin changes: what it does, how it is put together, decisions that
 aren't obvious from the code, and anything that has bitten you before.
 
-- What it does: lists NetBird peers in a sidebar panel (`netbird`), offers "Add as host" through
-  `shell.openHostEditor` and checks per peer whether a NetBird access policy lets the Termix server's
-  own peer open TCP to the SSH port.
-- How it is put together: `src/backend/netbird-api.ts` (GET `/api/peers` and `/api/policies` through
-  `ctx.fetch`, `Authorization: Token <pat>`, only the configured host via `allowPrivateHosts`),
-  `src/backend/reachability.ts` (pure policy evaluation, all rules tested in
-  `tests/backend/reachability.test.ts`), `src/backend/routes.ts` (one route `GET /peers` behind
-  `peers.view`), `src/frontend/NetbirdPeersPanel.tsx`.
+- What it does: lists NetBird peers in a sidebar panel (`netbird`), signs the user in to NetBird
+  (service token, own PAT or OIDC single sign-on), adds peers as hosts (one through
+  `shell.openHostEditor`, many through `POST /hosts/import`), shows peer details and explains per
+  port which NetBird rule lets the Termix server's own peer reach a peer.
+- How it is put together:
+  - `src/backend/oidc.ts`: discovery, PKCE, authorize URL, code exchange, refresh, ID token claim
+    checks. Pure apart from `ctx.fetch`; unit tests in `tests/backend/oidc.test.ts`.
+  - `src/backend/auth.ts`: which credential a request uses (`sso` → own PAT → service, filtered by
+    `authMode`), the in-memory access token cache and the hand-over of a finished sign-in.
+  - `src/backend/netbird-api.ts`: GET only, on an allow-list of paths (`/peers`, `/peers/{id}`,
+    `/peers/{id}/accessible-peers`, `/policies`), only the configured host via `allowPrivateHosts`.
+  - `src/backend/reachability.ts`: pure policy evaluation (`evaluate`, `explain`), tested in
+    `tests/backend/reachability.test.ts` and `oidc.test.ts`.
+  - `src/backend/routes.ts`: `/auth/*`, `/peers`, `/peers/:peerId`, `/credentials`,
+    `/hosts/import`; route tests in `tests/backend/routes.test.ts` and `sso-import.test.ts`.
+  - Frontend: `NetbirdPeersPanel.tsx`, `AuthBar.tsx`, `ImportDialog.tsx`, `PeerDetails.tsx`.
 - Decisions:
-  - No `hosts:write`: the host editor creates the host, the user saves it. Keeps the plugin read only.
+  - SSO is generic OIDC, nothing provider specific. The token goes to NetBird as Bearer, so the
+    issuer and client must be ones NetBird accepts; the docs say how to find them.
+  - The callback is public (the IdP redirects the browser, there is no actor). It does not use
+    `ctx.asUser`, which would need `users:impersonate`. It seals the refresh token
+    (`ctx.secrets.seal`) into kv under `oidc-done:<userId>`; the user's next request
+    (`adoptFinishedLogin`) moves it into that user's `ctx.secrets` and writes the audit line.
+    States and unclaimed logins expire after ten minutes.
+  - The ID token is checked for iss, aud, nonce and exp, not its signature: it comes from the token
+    endpoint over TLS (OIDC Core 3.1.3.7). The access token is the one NetBird validates.
+  - 1.0 had no `hosts:write` and relied on the host editor. 1.1 adds it for the bulk import, which
+    runs as the acting user, re-reads peers from NetBird (only peers that user's sign-in sees) and
+    validates `credentialId` against `ctx.credentials.list`. Duplicates are matched by IP and port.
   - No `hosts:status-provide`: that capability makes the plugin the single source of every host's
     status dot and would push out the Host Status plugin. Peer state is shown in the panel instead.
-  - No database: everything is read live from NetBird on each panel load.
-  - "Add as host" uses the NetBird IP, not the DNS label: the label only resolves where NetBird DNS
-    is on, and servers often run with `--disable-dns`.
+  - No database: everything is read live from NetBird; kv holds only sign-in state.
+  - New hosts use the NetBird IP, not the DNS label: the label only resolves where NetBird DNS is
+    on, and servers often run with `--disable-dns`.
+  - A 403 on `/policies` (NetBird user roles) degrades to "not checked" instead of failing the list.
   - The check reads policies only. Posture checks are flagged, not evaluated.
-- Not in 1.0: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes.
+- Not yet: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes,
+  writing to NetBird.

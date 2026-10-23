@@ -1,8 +1,8 @@
 {
   "id": "netbird",
   "name": "NetBird",
-  "version": "1.0.0",
-  "description": "Lists the peers of your NetBird network, adds them as hosts and checks whether your access policies let Termix reach their SSH port.",
+  "version": "1.1.0",
+  "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
   "author": {
     "name": "Maximilian Herz",
     "url": "https://github.com/P3RF3CTION"
@@ -14,17 +14,28 @@
   "icon": "Network",
   "features": [
     "Lists NetBird peers with NetBird IP, DNS name, OS, groups and online state",
-    "Adds a peer as a host through the host editor, in one click",
-    "Checks per peer whether a NetBird policy lets the Termix server reach its SSH port",
-    "Works with NetBird Cloud and self-hosted management servers",
-    "Read only: no host, credential or SSH access, the token stays on the server"
+    "Single sign-on with any OpenID Connect provider (code flow with PKCE), so each user sees what NetBird lets them see",
+    "Service user token or a personal access token per user as an alternative",
+    "Select peers and add them as hosts in one go, into a folder, with a saved credential; existing hosts are skipped",
+    "Peer details: client version, location, login expiry, accessible peers",
+    "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
+    "Works with NetBird Cloud and self-hosted management servers"
   ],
   "env": [],
   "engine": {
-    "termix": ">=26.10.0",
-    "api": "^1.2"
+    "termix": ">=26.10.3",
+    "api": "^1.8"
   },
-  "capabilities": ["network:outbound", "network:serve", "ui:surface"],
+  "capabilities": [
+    "network:outbound",
+    "network:serve",
+    "ui:surface",
+    "hosts:read",
+    "hosts:write",
+    "kv:own",
+    "secrets:own",
+    "credentials:use"
+  ],
   "contributes": {
     "panels": [
       {
@@ -38,6 +49,12 @@
         "name": "peers.view",
         "titleKey": "permissions.peers.view.title",
         "descriptionKey": "permissions.peers.view.description",
+        "defaultRoles": ["admin"]
+      },
+      {
+        "name": "peers.import",
+        "titleKey": "permissions.peers.import.title",
+        "descriptionKey": "permissions.peers.import.description",
         "defaultRoles": ["admin"]
       }
     ],
@@ -53,12 +70,91 @@
           "group": "settings.group.api"
         },
         {
+          "key": "authMode",
+          "type": "select",
+          "labelKey": "settings.authMode.label",
+          "descriptionKey": "settings.authMode.description",
+          "default": "service",
+          "options": [
+            {
+              "value": "service",
+              "labelKey": "settings.authMode.service"
+            },
+            {
+              "value": "user-or-service",
+              "labelKey": "settings.authMode.userOrService"
+            },
+            {
+              "value": "user",
+              "labelKey": "settings.authMode.user"
+            }
+          ],
+          "group": "settings.group.api"
+        },
+        {
           "key": "apiToken",
           "type": "secret",
           "labelKey": "settings.apiToken.label",
           "descriptionKey": "settings.apiToken.description",
           "placeholderKey": "settings.apiToken.placeholder",
           "group": "settings.group.api"
+        },
+        {
+          "key": "oidcIssuer",
+          "type": "string",
+          "labelKey": "settings.oidcIssuer.label",
+          "descriptionKey": "settings.oidcIssuer.description",
+          "placeholderKey": "settings.oidcIssuer.placeholder",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcClientId",
+          "type": "string",
+          "labelKey": "settings.oidcClientId.label",
+          "descriptionKey": "settings.oidcClientId.description",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcClientSecret",
+          "type": "secret",
+          "labelKey": "settings.oidcClientSecret.label",
+          "descriptionKey": "settings.oidcClientSecret.description",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcScopes",
+          "type": "string",
+          "labelKey": "settings.oidcScopes.label",
+          "descriptionKey": "settings.oidcScopes.description",
+          "default": "openid profile email offline_access",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcAudience",
+          "type": "string",
+          "labelKey": "settings.oidcAudience.label",
+          "descriptionKey": "settings.oidcAudience.description",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcExtraParams",
+          "type": "string",
+          "labelKey": "settings.oidcExtraParams.label",
+          "descriptionKey": "settings.oidcExtraParams.description",
+          "placeholderKey": "settings.oidcExtraParams.placeholder",
+          "default": "",
+          "group": "settings.group.sso"
+        },
+        {
+          "key": "oidcUseIdToken",
+          "type": "boolean",
+          "labelKey": "settings.oidcUseIdToken.label",
+          "descriptionKey": "settings.oidcUseIdToken.description",
+          "default": false,
+          "group": "settings.group.sso"
         },
         {
           "key": "termixPeer",
@@ -78,6 +174,25 @@
           "min": 1,
           "max": 65535,
           "group": "settings.group.check"
+        },
+        {
+          "key": "checkPorts",
+          "type": "string",
+          "labelKey": "settings.checkPorts.label",
+          "descriptionKey": "settings.checkPorts.description",
+          "placeholderKey": "settings.checkPorts.placeholder",
+          "default": "",
+          "group": "settings.group.check"
+        }
+      ],
+      "user": [
+        {
+          "key": "userApiToken",
+          "type": "secret",
+          "labelKey": "settings.userApiToken.label",
+          "descriptionKey": "settings.userApiToken.description",
+          "placeholderKey": "settings.apiToken.placeholder",
+          "group": "settings.group.api"
         }
       ]
     }

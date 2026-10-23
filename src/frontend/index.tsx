@@ -1,12 +1,18 @@
 import { Network } from "lucide-react";
-import type { PanelProps, TermixApp } from "@termix-ssh/plugin-sdk/frontend";
+import {
+  usePermission,
+  type PanelProps,
+  type TermixApp,
+} from "@termix-ssh/plugin-sdk/frontend";
 import { NetbirdPeersPanel } from "./NetbirdPeersPanel";
 
 export function activate(app: TermixApp): void {
   function Panel({ shell }: PanelProps) {
+    const canImport = usePermission("peers.import");
     return (
       <NetbirdPeersPanel
         api={app.api}
+        canImport={canImport}
         onAddHost={
           shell.openHostEditor
             ? (draft) => shell.openHostEditor!(draft)

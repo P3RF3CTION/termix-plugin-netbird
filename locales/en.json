@@ -1,7 +1,7 @@
 {
   "plugin": {
     "name": "NetBird",
-    "description": "Lists the peers of your NetBird network, adds them as hosts and checks whether your access policies let Termix reach their SSH port."
+    "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them."
   },
   "nav": {
     "netbird": "NetBird"
@@ -10,8 +10,8 @@
     "search": "Search peers",
     "refresh": "Refresh",
     "loading": "Loading peers…",
-    "notConfigured": "Set the NetBird API token in Settings, Plugins, NetBird.",
-    "tokenRejected": "NetBird rejected the API token.",
+    "notConfigured": "Set a NetBird token in Settings, Plugins, NetBird, or ask your admin to set up sign-in.",
+    "tokenRejected": "NetBird rejected the credential. Sign in again or check the token.",
     "apiError": "The NetBird management API could not be read.",
     "empty": "No peers in this NetBird network.",
     "noMatches": "No peer matches the search.",
@@ -25,7 +25,16 @@
     "termixPeer": "Checked from Termix peer {{name}}",
     "termixPeerMissing": "The Termix peer from the settings is not in this network.",
     "termixPeerUnset": "Set the Termix peer in the settings to check SSH reachability.",
-    "self": "This is the Termix server"
+    "self": "This is the Termix server",
+    "signInNeeded": "Sign in to NetBird to see your peers.",
+    "policiesHidden": "Your NetBird account may not read access policies, so reachability is not checked.",
+    "selectAll": "Select all shown",
+    "selected": "{{count}} selected",
+    "importSelected": "Add selected as hosts",
+    "imported": "Host exists",
+    "details": "Details",
+    "hideDetails": "Hide details",
+    "selectPeer": "Select {{name}}"
   },
   "reach": {
     "allowed": "SSH {{port}} allowed",
@@ -40,13 +49,18 @@
       "view": {
         "title": "View NetBird peers",
         "description": "See every peer of the NetBird network, its groups and which policies reach it."
+      },
+      "import": {
+        "title": "Import NetBird peers as hosts",
+        "description": "Add selected NetBird peers as hosts owned by the user."
       }
     }
   },
   "settings": {
     "group": {
       "api": "NetBird API",
-      "check": "Reachability check"
+      "check": "Reachability check",
+      "sso": "Single sign-on (OpenID Connect)"
     },
     "managementUrl": {
       "label": "Management URL",
@@ -54,8 +68,8 @@
       "placeholder": "https://api.netbird.io"
     },
     "apiToken": {
-      "label": "API token",
-      "description": "A personal access token of a NetBird service account. Read access is enough; an auditor role is recommended.",
+      "label": "Service token",
+      "description": "A personal access token of a NetBird service user. Used for everyone in the \"Service token\" mode and as the fallback in \"Own sign-in, else service token\". Read access is enough; an auditor role is recommended.",
       "placeholder": "nbp_..."
     },
     "termixPeer": {
@@ -66,6 +80,110 @@
     "sshPort": {
       "label": "SSH port",
       "description": "The port the reachability check and new hosts use."
+    },
+    "authMode": {
+      "label": "Sign-in mode",
+      "description": "Who the plugin talks to NetBird as. With an own sign-in, NetBird applies each user's own permissions.",
+      "service": "Service token for everyone",
+      "userOrService": "Own sign-in (SSO or own token), else service token",
+      "user": "Own sign-in only (SSO or own token)"
+    },
+    "oidcIssuer": {
+      "label": "Issuer URL",
+      "description": "The OpenID Connect issuer whose tokens your NetBird management server accepts, for example its built-in IdP (https://vpn.example.com/oauth2) or your Keycloak, Zitadel, Authentik or Entra ID realm. Leave empty to turn single sign-on off.",
+      "placeholder": "https://vpn.example.com/oauth2"
+    },
+    "oidcClientId": {
+      "label": "Client ID",
+      "description": "A client NetBird accepts tokens from (its audience), usually the NetBird dashboard client. Register the redirect URI shown in the NetBird panel for it."
+    },
+    "oidcClientSecret": {
+      "label": "Client secret",
+      "description": "Only for a confidential client. Leave empty for a public client with PKCE."
+    },
+    "oidcScopes": {
+      "label": "Scopes",
+      "description": "offline_access gives a refresh token, so users stay signed in."
+    },
+    "oidcAudience": {
+      "label": "Audience",
+      "description": "Optional audience parameter, needed by some providers (Auth0) to issue an API token for NetBird."
+    },
+    "oidcExtraParams": {
+      "label": "Extra authorization parameters",
+      "description": "Optional, as key=value&key=value. For example connector_id=<id> to skip the connector choice of a Dex based IdP.",
+      "placeholder": "connector_id=keycloak"
+    },
+    "oidcUseIdToken": {
+      "label": "Send the ID token",
+      "description": "Send the ID token instead of the access token to NetBird. Only for setups where NetBird validates ID tokens."
+    },
+    "checkPorts": {
+      "label": "Ports to check",
+      "description": "More ports for the access explanation in the peer details, comma separated, for example 3389, 5900 for RDP and VNC.",
+      "placeholder": "3389, 5900"
+    },
+    "userApiToken": {
+      "label": "Your NetBird access token",
+      "description": "Your own NetBird personal access token. Used when you are not signed in with SSO and the sign-in mode allows an own sign-in."
     }
+  },
+  "auth": {
+    "signInSso": "Sign in with SSO",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as {{name}}",
+    "signedIn": "Signed in with SSO",
+    "usingUserToken": "Using your own NetBird token",
+    "usingService": "Using the shared service token",
+    "popupBlocked": "The sign-in window was blocked. Allow pop-ups for Termix and try again.",
+    "failed": "Sign-in failed.",
+    "notConfigured": "Single sign-on is not set up. An admin can enter the identity provider in the plugin settings.",
+    "redirectUri": "Redirect URI to register at the identity provider: {{uri}}",
+    "orToken": "Or set your own NetBird access token in your plugin settings."
+  },
+  "import": {
+    "title": "Add {{count}} peers as hosts",
+    "folder": "Folder",
+    "folderPlaceholder": "NetBird",
+    "username": "Username",
+    "port": "SSH port",
+    "credential": "Login",
+    "credentialNone": "None, set it later in the host",
+    "tagGroups": "Tag hosts with their NetBird groups",
+    "start": "Add hosts",
+    "cancel": "Cancel",
+    "result": "{{created}} added, {{skipped}} skipped, {{failed}} failed",
+    "error": "The hosts could not be added."
+  },
+  "detail": {
+    "loading": "Loading details…",
+    "error": "The details could not be loaded.",
+    "version": "NetBird version",
+    "os": "System",
+    "hostname": "Hostname",
+    "connectionIp": "Public address",
+    "location": "Location",
+    "lastLogin": "Last login",
+    "loginExpiry": "Login expiry",
+    "loginExpired": "Login expired: the peer needs to sign in again",
+    "loginExpiryOn": "On",
+    "loginExpiryOff": "Off",
+    "approval": "Waiting for approval",
+    "ephemeral": "Ephemeral peer",
+    "sshServer": "NetBird SSH server",
+    "on": "On",
+    "off": "Off",
+    "accessible": "Reachable peers",
+    "dnsLabels": "DNS names",
+    "access": "Access from the Termix peer",
+    "portAllowed": "Port {{port}} allowed by",
+    "portBlocked": "Port {{port}}: no rule allows it",
+    "portUnknown": "Port {{port}}: not checked",
+    "otherPorts": "Rules between these peers on other ports",
+    "disabled": "Matching rules that are switched off",
+    "ruleLine": "{{policy}} · {{protocol}} {{ports}}",
+    "reverse": "via bidirectional rule",
+    "posture": "posture checks apply",
+    "noTermixPeer": "Set the Termix peer in the settings to see which policy reaches this peer."
   }
 }

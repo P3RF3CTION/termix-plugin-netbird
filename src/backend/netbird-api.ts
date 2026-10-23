@@ -1,4 +1,5 @@
 import type { PluginContext } from "@termix-ssh/plugin-sdk/backend";
+import type { NetbirdCredential } from "./auth.js";
 import type { NetbirdPeer, NetbirdPolicy } from "./reachability.js";
 
 export const DEFAULT_MANAGEMENT_URL = "https://api.netbird.io";
@@ -26,30 +27,45 @@ export class NetbirdApiError extends Error {
   }
 }
 
+/** NetBird peer ids are xid strings; anything else never reaches the URL. */
+export function isPeerId(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value);
+}
+
+type ApiPath =
+  | "/peers"
+  | "/policies"
+  | `/peers/${string}`
+  | `/peers/${string}/accessible-peers`;
+
 /**
- * GET against the NetBird management API with the admin's token. Only the
+ * GET against the NetBird management API with the given credential. Only the
  * configured host is reachable (it may be a self-hosted server on the LAN),
- * redirects are refused, and the token never leaves this function.
+ * redirects are refused, and the credential never leaves this function.
  */
 export async function netbirdGet<T>(
   ctx: PluginContext,
-  path: "/peers" | "/policies",
+  credential: NetbirdCredential,
+  path: ApiPath,
 ): Promise<T> {
-  const token = ((await ctx.settings.get<string>("apiToken")) ?? "").trim();
-  if (!token) throw new NetbirdApiError("No NetBird API token is set", 412);
   const base = apiBase(await ctx.settings.get<string>("managementUrl"));
-
   const response = await ctx.fetch(`${base}${path}`, {
     headers: {
-      Authorization: `Token ${token}`,
+      Authorization: credential.header,
       Accept: "application/json",
       "User-Agent": "Termix-NetBird-Plugin",
     },
     allowPrivateHosts: [new URL(base).hostname],
     timeoutMs: 15_000,
   });
-  if (response.status === 401 || response.status === 403) {
-    throw new NetbirdApiError("NetBird rejected the API token", 401);
+  if (response.status === 401) {
+    throw new NetbirdApiError("NetBird rejected the credential", 401);
+  }
+  if (response.status === 403) {
+    throw new NetbirdApiError("NetBird denied access", 403);
+  }
+  if (response.status === 404) {
+    throw new NetbirdApiError("Not found in NetBird", 404);
   }
   if (!response.ok) {
     throw new NetbirdApiError(`NetBird API answered ${response.status}`, 502);
@@ -57,16 +73,36 @@ export async function netbirdGet<T>(
   return (await response.json()) as T;
 }
 
-export async function loadPeersAndPolicies(ctx: PluginContext): Promise<{
+export async function loadPeersAndPolicies(
+  ctx: PluginContext,
+  credential: NetbirdCredential,
+): Promise<{
   peers: NetbirdPeer[];
   policies: NetbirdPolicy[];
+  policiesReadable: boolean;
 }> {
-  const [peers, policies] = await Promise.all([
-    netbirdGet<NetbirdPeer[]>(ctx, "/peers"),
-    netbirdGet<NetbirdPolicy[]>(ctx, "/policies"),
-  ]);
+  const peers = await netbirdGet<NetbirdPeer[]>(ctx, credential, "/peers");
+  // A regular NetBird user may list peers but not policies. The check then
+  // reports "unknown" instead of failing the whole list.
+  let policies: NetbirdPolicy[] = [];
+  let policiesReadable = true;
+  try {
+    const result = await netbirdGet<NetbirdPolicy[]>(
+      ctx,
+      credential,
+      "/policies",
+    );
+    policies = Array.isArray(result) ? result : [];
+  } catch (err) {
+    if (err instanceof NetbirdApiError && err.status === 403) {
+      policiesReadable = false;
+    } else {
+      throw err;
+    }
+  }
   return {
     peers: Array.isArray(peers) ? peers : [],
-    policies: Array.isArray(policies) ? policies : [],
+    policies,
+    policiesReadable,
   };
 }

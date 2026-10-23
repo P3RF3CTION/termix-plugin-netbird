@@ -5,46 +5,32 @@ import {
   type HostDraft,
   type PluginApiClient,
 } from "@termix-ssh/plugin-sdk/frontend";
-import { Badge, Button, Input } from "@termix-ssh/plugin-sdk/ui";
+import { Badge, Button, Checkbox, Input } from "@termix-ssh/plugin-sdk/ui";
 import {
+  ChevronDown,
+  ChevronRight,
   CircleCheck,
   CircleHelp,
   CircleX,
   Copy,
+  Download,
   Loader2,
   Plus,
   RefreshCw,
 } from "lucide-react";
+import { AuthBar } from "./AuthBar";
+import { ImportDialog } from "./ImportDialog";
+import { PeerDetails } from "./PeerDetails";
+import type { PeersResponse, PeerView } from "./types";
 
-export interface PeerView {
-  id: string;
-  name: string;
-  ip: string;
-  dnsLabel: string;
-  os: string;
-  connected: boolean;
-  lastSeen: string | null;
-  groups: string[];
-  sshPort: number;
-  reachability: {
-    state: "allowed" | "blocked" | "unknown" | "self";
-    policies: string[];
-    postureChecks: boolean;
-  };
-}
-
-export interface PeersResponse {
-  configured: boolean;
-  termixPeer: string | null;
-  termixPeerMissing: boolean;
-  peers: PeerView[];
-  error?: "token" | "api";
-}
+export type { PeersResponse, PeerView } from "./types";
 
 interface Props {
   api: PluginApiClient;
   /** Absent when the shell cannot open the host editor. */
   onAddHost?: (draft: HostDraft) => void;
+  /** The user holds netbird.peers.import. */
+  canImport?: boolean;
 }
 
 function errorBody(err: unknown): PeersResponse | null {
@@ -54,12 +40,19 @@ function errorBody(err: unknown): PeersResponse | null {
     : null;
 }
 
-export function NetbirdPeersPanel({ api, onAddHost }: Props) {
+export function NetbirdPeersPanel({
+  api,
+  onAddHost,
+  canImport = false,
+}: Props) {
   const { t } = useTranslation();
   const toast = useToast();
   const [data, setData] = useState<PeersResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,8 +63,10 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
       setData(
         errorBody(err) ?? {
           configured: true,
+          source: null,
           termixPeer: null,
           termixPeerMissing: false,
+          policiesReadable: true,
           peers: [],
           error: "api",
         },
@@ -149,13 +144,36 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
     );
   };
 
+  const selectable = shown.filter(
+    (p) => p.ip && !p.imported && p.reachability.state !== "self",
+  );
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allSelected =
+    selectable.length > 0 && selectable.every((p) => selected.has(p.id));
+  const toggleAll = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) selectable.forEach((p) => next.delete(p.id));
+      else selectable.forEach((p) => next.add(p.id));
+      return next;
+    });
+
   let notice: string | null = null;
-  if (data && !data.configured) notice = t("panel.notConfigured");
+  if (data?.error === "signin") notice = t("panel.signInNeeded");
+  else if (data && !data.configured) notice = t("panel.notConfigured");
   else if (data?.error === "token") notice = t("panel.tokenRejected");
   else if (data?.error === "api") notice = t("panel.apiError");
 
   let checkInfo: string | null = null;
-  if (data?.configured && !data.error) {
+  if (data?.configured && !data.error && !data.policiesReadable) {
+    checkInfo = t("panel.policiesHidden");
+  } else if (data?.configured && !data.error) {
     if (data.termixPeer)
       checkInfo = t("panel.termixPeer", { name: data.termixPeer });
     else if (data.termixPeerMissing) checkInfo = t("panel.termixPeerMissing");
@@ -164,6 +182,7 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
 
   return (
     <div className="flex h-full flex-col gap-2 p-2">
+      <AuthBar api={api} onChange={() => void load()} />
       <div className="flex items-center gap-1.5">
         <Input
           value={query}
@@ -188,6 +207,33 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
 
       {checkInfo && (
         <p className="text-[10px] text-muted-foreground">{checkInfo}</p>
+      )}
+
+      {canImport && !notice && selectable.length > 0 && (
+        <div className="flex items-center gap-2 text-[10px]">
+          <label className="flex items-center gap-1.5">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleAll}
+              aria-label={t("panel.selectAll")}
+            />
+            {t("panel.selectAll")}
+          </label>
+          {selected.size > 0 && (
+            <>
+              <span className="text-muted-foreground">
+                {t("panel.selected", { count: selected.size })}
+              </span>
+              <Button
+                className="ml-auto h-7 gap-1 text-xs"
+                onClick={() => setImportOpen(true)}
+              >
+                <Download className="size-3.5" />
+                {t("panel.importSelected")}
+              </Button>
+            </>
+          )}
+        </div>
       )}
 
       {loading && !data && (
@@ -215,8 +261,22 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
               data-testid={`peer-${peer.id}`}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 break-all text-xs font-semibold">
-                  {peer.name}
+                <span className="flex min-w-0 items-start gap-1.5">
+                  {canImport && (
+                    <Checkbox
+                      checked={selected.has(peer.id)}
+                      disabled={
+                        !peer.ip ||
+                        peer.imported ||
+                        peer.reachability.state === "self"
+                      }
+                      onCheckedChange={() => toggle(peer.id)}
+                      aria-label={t("panel.selectPeer", { name: peer.name })}
+                    />
+                  )}
+                  <span className="min-w-0 break-all text-xs font-semibold">
+                    {peer.name}
+                  </span>
                 </span>
                 <span
                   className={
@@ -277,30 +337,73 @@ export function NetbirdPeersPanel({ api, onAddHost }: Props) {
 
               <div className="flex items-center justify-between gap-2">
                 {reachBadge(peer)}
-                {onAddHost && peer.reachability.state !== "self" && (
-                  <Button
-                    variant="outline"
-                    className="h-7 shrink-0 gap-1 text-xs"
-                    disabled={!peer.ip}
-                    onClick={() =>
-                      onAddHost({
-                        name: peer.name,
-                        // The NetBird IP, not the DNS label: the label only
-                        // resolves where NetBird DNS is on, which servers
-                        // often switch off (--disable-dns).
-                        ip: peer.ip,
-                        port: peer.sshPort,
-                      })
-                    }
-                  >
-                    <Plus className="size-3.5" />
-                    {t("panel.addHost")}
-                  </Button>
+                {peer.imported && (
+                  <Badge variant="outline" className="text-[10px]">
+                    {t("panel.imported")}
+                  </Badge>
                 )}
+                {onAddHost &&
+                  !peer.imported &&
+                  peer.reachability.state !== "self" && (
+                    <Button
+                      variant="outline"
+                      className="h-7 shrink-0 gap-1 text-xs"
+                      disabled={!peer.ip}
+                      onClick={() =>
+                        onAddHost({
+                          name: peer.name,
+                          // The NetBird IP, not the DNS label: the label only
+                          // resolves where NetBird DNS is on, which servers
+                          // often switch off (--disable-dns).
+                          ip: peer.ip,
+                          port: peer.sshPort,
+                        })
+                      }
+                    >
+                      <Plus className="size-3.5" />
+                      {t("panel.addHost")}
+                    </Button>
+                  )}
               </div>
+
+              <Button
+                variant="ghost"
+                className="h-6 justify-start gap-1 px-1 text-[10px] text-muted-foreground"
+                onClick={() =>
+                  setExpanded((cur) => (cur === peer.id ? null : peer.id))
+                }
+                aria-expanded={expanded === peer.id}
+              >
+                {expanded === peer.id ? (
+                  <ChevronDown className="size-3" />
+                ) : (
+                  <ChevronRight className="size-3" />
+                )}
+                {expanded === peer.id
+                  ? t("panel.hideDetails")
+                  : t("panel.details")}
+              </Button>
+              {expanded === peer.id && (
+                <PeerDetails api={api} peerId={peer.id} />
+              )}
             </div>
           ))}
       </div>
+
+      {canImport && (
+        <ImportDialog
+          api={api}
+          peerIds={[...selected]}
+          defaultPort={data?.peers[0]?.sshPort ?? 22}
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onDone={() => {
+            setImportOpen(false);
+            setSelected(new Set());
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }
