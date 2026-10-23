@@ -1,7 +1,7 @@
 {
   "registry": "p3rf3ction",
   "name": "P3RF3CTION plugins",
-  "updatedAt": "2026-10-23T05:23:25.078Z",
+  "updatedAt": "2026-10-23T05:29:43.357Z",
   "publicKey": "EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=",
   "plugins": [
     {
@@ -22,7 +22,28 @@
         "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
         "Works with NetBird Cloud and self-hosted management servers"
       ],
-      "versions": [],
+      "versions": [
+        {
+          "version": "1.1.0",
+          "api": "^1.8",
+          "url": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/download/v1.1.0/netbird-1.1.0.tmxplug",
+          "sha256": "018789f9a455fb8334b2a803d77c4f2b78d3eb9536c8bd04345aa259e66d1f95",
+          "signature": "UsrQ9VcgBM+39iDnUGlyqhlb5YSFXr40DdnEFbqoDT/3b7dOVcEmbYC6xUO+wHrX6etvxdgaUCYKIkP8dSgIBg==",
+          "size": 77490,
+          "capabilities": [
+            "network:outbound",
+            "network:serve",
+            "ui:surface",
+            "hosts:read",
+            "hosts:write",
+            "kv:own",
+            "secrets:own",
+            "credentials:use"
+          ],
+          "releaseNotesUrl": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/tag/v1.1.0",
+          "publishedAt": "2026-10-23T05:23:14Z"
+        }
+      ],
       "prereleases": []
     }
   ]
