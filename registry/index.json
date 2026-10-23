@@ -1,0 +1,29 @@
+{
+  "registry": "p3rf3ction",
+  "name": "P3RF3CTION plugins",
+  "updatedAt": "2026-10-23T05:23:25.078Z",
+  "publicKey": "EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=",
+  "plugins": [
+    {
+      "id": "netbird",
+      "name": "NetBird",
+      "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
+      "author": "Maximilian Herz",
+      "category": "Networking",
+      "repository": "https://github.com/P3RF3CTION/termix-plugin-netbird",
+      "icon": "Network",
+      "docs": "https://github.com/P3RF3CTION/termix-plugin-netbird/tree/main/docs",
+      "features": [
+        "Lists NetBird peers with NetBird IP, DNS name, OS, groups and online state",
+        "Single sign-on with any OpenID Connect provider (code flow with PKCE), so each user sees what NetBird lets them see",
+        "Service user token or a personal access token per user as an alternative",
+        "Select peers and add them as hosts in one go, into a folder, with a saved credential; existing hosts are skipped",
+        "Peer details: client version, location, login expiry, accessible peers",
+        "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
+        "Works with NetBird Cloud and self-hosted management servers"
+      ],
+      "versions": [],
+      "prereleases": []
+    }
+  ]
+}
