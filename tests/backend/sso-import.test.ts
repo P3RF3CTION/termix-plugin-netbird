@@ -17,19 +17,19 @@ const peers = [
   {
     id: "p-termix",
     name: "termix",
-    ip: "100.79.103.251",
+    ip: "100.64.0.10",
     groups: [{ id: "g-t", name: "Termix" }],
   },
   {
     id: "p-web",
     name: "web-1",
-    ip: "100.79.10.10",
+    ip: "100.64.0.30",
     groups: [
       { id: "g-all", name: "All" },
       { id: "g-w", name: "Web" },
     ],
   },
-  { id: "p-db", name: "db-1", ip: "100.79.10.20", groups: [] },
+  { id: "p-db", name: "db-1", ip: "100.64.0.40", groups: [] },
 ];
 
 function b64(v: unknown) {
@@ -229,7 +229,7 @@ describe("POST /hosts/import", () => {
           id: 1,
           userId: "user-1",
           name: "db",
-          ip: "100.79.10.20",
+          ip: "100.64.0.40",
           port: 22,
           username: "root",
           tags: null,

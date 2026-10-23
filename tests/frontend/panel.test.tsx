@@ -50,14 +50,14 @@ describe("NetbirdPeersPanel", () => {
           termixPeerMissing: false,
           peers: [
             {
-              id: "p-oracle",
-              name: "oracle-2",
-              ip: "100.79.185.105",
-              dnsLabel: "oracle-2.netbird.selfhosted",
+              id: "p-cloud",
+              name: "cloud-1",
+              ip: "100.64.0.20",
+              dnsLabel: "cloud-1.netbird.example",
               os: "Ubuntu",
               connected: true,
               lastSeen: null,
-              groups: ["Oracle"],
+              groups: ["Cloud"],
               sshPort: 2222,
               reachability: {
                 state: "blocked",
@@ -70,15 +70,15 @@ describe("NetbirdPeersPanel", () => {
       />,
     );
     await waitFor(() =>
-      expect(screen.getByTestId("peer-p-oracle")).toBeTruthy(),
+      expect(screen.getByTestId("peer-p-cloud")).toBeTruthy(),
     );
-    expect(screen.getByTestId("reach-p-oracle").textContent).toContain(
+    expect(screen.getByTestId("reach-p-cloud").textContent).toContain(
       "reach.blocked",
     );
     screen.getByText("panel.addHost").click();
     expect(onAddHost).toHaveBeenCalledWith({
-      name: "oracle-2",
-      ip: "100.79.185.105",
+      name: "cloud-1",
+      ip: "100.64.0.20",
       port: 2222,
     });
   });
