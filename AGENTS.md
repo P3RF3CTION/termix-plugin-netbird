@@ -69,7 +69,7 @@ aren't obvious from the code, and anything that has bitten you before.
     checks. Pure apart from `ctx.fetch`; unit tests in `tests/backend/oidc.test.ts`.
   - `src/backend/auth.ts`: which credential a request uses (`sso` → own PAT → service, filtered by
     `authMode`), the in-memory access token cache and the hand-over of a finished sign-in.
-  - `src/backend/netbird-api.ts`: GET only, on an allow-list of paths (`/peers`, `/peers/{id}`,
+  - `src/backend/netbird-api.ts`: GET only, on an allow-list of paths (`/users/current`, `/peers`, `/peers/{id}`,
     `/peers/{id}/accessible-peers`, `/policies`), only the configured host via `allowPrivateHosts`.
   - `src/backend/reachability.ts`: pure policy evaluation (`evaluate`, `explain`), tested in
     `tests/backend/reachability.test.ts` and `oidc.test.ts`.

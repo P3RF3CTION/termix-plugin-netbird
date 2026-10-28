@@ -33,6 +33,7 @@ export function isPeerId(value: unknown): value is string {
 }
 
 type ApiPath =
+  | "/users/current"
   | "/peers"
   | "/policies"
   | `/peers/${string}`
@@ -71,6 +72,39 @@ export async function netbirdGet<T>(
     throw new NetbirdApiError(`NetBird API answered ${response.status}`, 502);
   }
   return (await response.json()) as T;
+}
+
+export interface NetbirdIdentity {
+  name: string;
+  role: string;
+  serviceUser: boolean;
+}
+
+/**
+ * Who the credential belongs to in NetBird (GET /users/current). NetBird
+ * shows a user with the role "user" only their own peers, which is the usual
+ * reason a personal token lists fewer peers than the service token. Null
+ * when the server is too old for the endpoint or refuses it.
+ */
+export async function whoAmI(
+  ctx: PluginContext,
+  credential: NetbirdCredential,
+): Promise<NetbirdIdentity | null> {
+  try {
+    const user = await netbirdGet<{
+      name?: string;
+      email?: string;
+      role?: string;
+      is_service_user?: boolean;
+    }>(ctx, credential, "/users/current");
+    return {
+      name: user.name || user.email || "",
+      role: typeof user.role === "string" ? user.role : "",
+      serviceUser: user.is_service_user === true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function loadPeersAndPolicies(

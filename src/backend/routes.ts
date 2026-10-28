@@ -13,6 +13,8 @@ import {
   loadPeersAndPolicies,
   NetbirdApiError,
   netbirdGet,
+  whoAmI,
+  type NetbirdIdentity,
 } from "./netbird-api.js";
 import {
   buildAuthorizeUrl,
@@ -52,6 +54,12 @@ export interface PeerView {
   reachability: Reachability;
   /** A Termix host with this IP and port exists for the user. */
   imported: boolean;
+  /** NetBird's own SSH server runs on the peer. */
+  sshEnabled: boolean;
+  /** The peer's login expired; it is offline until someone logs in again. */
+  loginExpired: boolean;
+  /** The peer waits for an admin to approve it in NetBird. */
+  approvalRequired: boolean;
 }
 
 export interface PeersResponse {
@@ -64,7 +72,20 @@ export interface PeersResponse {
   /** False when the credential may list peers but not read policies. */
   policiesReadable: boolean;
   peers: PeerView[];
-  error?: "token" | "api" | "signin";
+  /** Who the credential belongs to in NetBird, when the server says. */
+  identity?: NetbirdIdentity | null;
+  /**
+   * The credential's NetBird role is "user": NetBird lists only that user's
+   * own peers, so the list can be shorter than with the service token.
+   */
+  restricted?: boolean;
+  /** NetBird rejected the user's own sign-in and the service token was used. */
+  fallbackFrom?: CredentialSource | null;
+  /**
+   * token: NetBird rejected the credential. forbidden: it is valid but may
+   * not list peers (for example regular users are blocked in NetBird).
+   */
+  error?: "token" | "api" | "signin" | "forbidden";
 }
 
 export interface PeerDetail {
@@ -346,7 +367,9 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
    *     description: >
    *       Reads peers and access policies from the NetBird management API with the
    *       user's single sign-on session, the user's own token or the service
-   *       token (see the sign-in mode), and reports per peer whether a policy lets
+   *       token (see the sign-in mode; in "user-or-service" a rejected own
+   *       sign-in falls back to the service token and fallbackFrom says so), names
+   *       the NetBird user and role behind the credential, and reports per peer whether a policy lets
    *       the Termix server's own peer open TCP to the SSH port, and whether a
    *       Termix host with that address already exists. Requires
    *       netbird.peers.view.
@@ -357,6 +380,10 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
    *         description: Peers; configured=false when no credential fits.
    *       401:
    *         description: NetBird rejected the credential.
+   *       403:
+   *         description: >
+   *           The credential is valid but may not list peers (for example
+   *           regular users are blocked in the NetBird account settings).
    *       502:
    *         description: The NetBird management API could not be read.
    */
@@ -369,7 +396,7 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       policiesReadable: true,
       peers: [],
     };
-    const credential = await resolveCredential(ctx, actor());
+    let credential = await resolveCredential(ctx, actor());
     if (!credential) {
       const status = await authStatus(ctx, actor());
       return res.json({
@@ -378,11 +405,31 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       });
     }
 
+    let fallbackFrom: CredentialSource | null = null;
     try {
-      const { peers, policies, policiesReadable } = await loadPeersAndPolicies(
-        ctx,
-        credential,
-      );
+      let loaded: Awaited<ReturnType<typeof loadPeersAndPolicies>>;
+      try {
+        loaded = await loadPeersAndPolicies(ctx, credential);
+      } catch (err) {
+        // In "user-or-service" a rejected own token or session falls back to
+        // the service token, and the panel says so, instead of staying empty.
+        const rejected =
+          err instanceof NetbirdApiError &&
+          (err.status === 401 || err.status === 403) &&
+          credential.source !== "service";
+        const service = rejected
+          ? await resolveCredential(ctx, actor(), true)
+          : null;
+        if (!service) throw err;
+        ctx.log.warn(
+          `NetBird rejected the ${credential.source} sign-in (${(err as NetbirdApiError).status}), using the service token`,
+        );
+        fallbackFrom = credential.source;
+        credential = service;
+        loaded = await loadPeersAndPolicies(ctx, credential);
+      }
+      const { peers, policies, policiesReadable } = loaded;
+      const identity = await whoAmI(ctx, credential);
       const sshPort = clampPort(await ctx.settings.get<number>("sshPort"));
       const reference = (
         (await ctx.settings.get<string>("termixPeer")) ?? ""
@@ -393,6 +440,9 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       const body: PeersResponse = {
         configured: true,
         source: credential.source,
+        identity,
+        restricted: identity?.role === "user",
+        fallbackFrom,
         termixPeer: termix?.name ?? null,
         termixPeerMissing: reference.length > 0 && termix === null,
         policiesReadable,
@@ -417,6 +467,9 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
                     postureChecks: false,
                   },
               imported: ip.length > 0 && existing.has(`${ip}:${sshPort}`),
+              sshEnabled: p.ssh_enabled === true,
+              loginExpired: p.login_expired === true,
+              approvalRequired: p.approval_required === true,
             };
           })
           .sort((a, b) => a.name.localeCompare(b.name)),
@@ -427,12 +480,17 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       ctx.log.warn(
         `NetBird peers could not be read: ${(err as Error).message}`,
       );
-      return res.status(status === 401 ? 401 : 502).json({
-        ...base,
-        configured: true,
-        source: credential.source,
-        error: status === 401 ? "token" : "api",
-      });
+      const error =
+        status === 401 ? "token" : status === 403 ? "forbidden" : "api";
+      return res
+        .status(status === 401 ? 401 : status === 403 ? 403 : 502)
+        .json({
+          ...base,
+          configured: true,
+          source: credential.source,
+          fallbackFrom,
+          error,
+        });
     }
   });
 

@@ -140,6 +140,7 @@ describe("GET /peers", () => {
     expect(mock.fetches.map((f) => f.url).sort()).toEqual([
       "https://vpn.example.com/api/peers",
       "https://vpn.example.com/api/policies",
+      "https://vpn.example.com/api/users/current",
     ]);
     expect(mock.fetches[0].init?.headers?.Authorization).toBe("Token nbp_test");
   });

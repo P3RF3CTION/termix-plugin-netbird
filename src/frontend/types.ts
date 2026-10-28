@@ -19,6 +19,15 @@ export interface PeerView {
     postureChecks: boolean;
   };
   imported: boolean;
+  sshEnabled: boolean;
+  loginExpired: boolean;
+  approvalRequired: boolean;
+}
+
+export interface NetbirdIdentity {
+  name: string;
+  role: string;
+  serviceUser: boolean;
 }
 
 export interface PeersResponse {
@@ -28,11 +37,15 @@ export interface PeersResponse {
   termixPeerMissing: boolean;
   policiesReadable: boolean;
   peers: PeerView[];
-  error?: "token" | "api" | "signin";
+  identity?: NetbirdIdentity | null;
+  restricted?: boolean;
+  fallbackFrom?: CredentialSource | null;
+  error?: "token" | "api" | "signin" | "forbidden";
 }
 
 export interface AuthStatus {
   mode: "service" | "user" | "user-or-service";
+  userTokenIgnored: boolean;
   ssoAvailable: boolean;
   serviceTokenSet: boolean;
   userTokenSet: boolean;
