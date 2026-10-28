@@ -50,6 +50,8 @@ export function NetbirdPeersPanel({
   const [data, setData] = useState<PeersResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [onlyOnline, setOnlyOnline] = useState(false);
+  const [group, setGroup] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -80,16 +82,26 @@ export function NetbirdPeersPanel({
     void load();
   }, [load]);
 
+  const groups = useMemo(
+    () =>
+      [...new Set((data?.peers ?? []).flatMap((p) => p.groups))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [data],
+  );
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const peers = data?.peers ?? [];
-    if (!q) return peers;
-    return peers.filter((p) =>
-      [p.name, p.ip, p.dnsLabel, p.os, ...p.groups].some((v) =>
-        v.toLowerCase().includes(q),
-      ),
+    return (data?.peers ?? []).filter(
+      (p) =>
+        (!onlyOnline || p.connected) &&
+        (!group || p.groups.includes(group)) &&
+        (!q ||
+          [p.name, p.ip, p.dnsLabel, p.os, ...p.groups].some((v) =>
+            v.toLowerCase().includes(q),
+          )),
     );
-  }, [data, query]);
+  }, [data, query, onlyOnline, group]);
 
   const copyIp = (ip: string) => {
     navigator.clipboard
@@ -168,6 +180,7 @@ export function NetbirdPeersPanel({
   if (data?.error === "signin") notice = t("panel.signInNeeded");
   else if (data && !data.configured) notice = t("panel.notConfigured");
   else if (data?.error === "token") notice = t("panel.tokenRejected");
+  else if (data?.error === "forbidden") notice = t("panel.forbidden");
   else if (data?.error === "api") notice = t("panel.apiError");
 
   let checkInfo: string | null = null;
@@ -204,6 +217,60 @@ export function NetbirdPeersPanel({
           />
         </Button>
       </div>
+
+      {data?.peers && data.peers.length > 0 && (
+        <div className="flex items-center gap-2 text-[10px]">
+          <label className="flex items-center gap-1.5">
+            <Checkbox
+              checked={onlyOnline}
+              onCheckedChange={(v) => setOnlyOnline(v === true)}
+              aria-label={t("panel.onlyOnline")}
+            />
+            {t("panel.onlyOnline")}
+          </label>
+          {groups.length > 0 && (
+            <select
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              aria-label={t("panel.group")}
+              className="ml-auto h-7 max-w-[60%] border border-border bg-background px-1 text-[10px]"
+              data-testid="group-filter"
+            >
+              <option value="">{t("panel.allGroups")}</option>
+              {groups.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {data?.fallbackFrom && (
+        <p
+          className="text-[10px] text-amber-600 dark:text-amber-400"
+          data-testid="fallback"
+        >
+          {t("panel.fallback")}
+        </p>
+      )}
+      {data?.identity?.name && !data.error && (
+        <p className="text-[10px] text-muted-foreground" data-testid="identity">
+          {t("panel.identity", {
+            name: data.identity.name,
+            role: data.identity.role || "?",
+          })}
+        </p>
+      )}
+      {data?.restricted && !data.error && (
+        <p
+          className="text-[10px] text-amber-600 dark:text-amber-400"
+          data-testid="restricted"
+        >
+          {t("panel.restricted")}
+        </p>
+      )}
 
       {checkInfo && (
         <p className="text-[10px] text-muted-foreground">{checkInfo}</p>
@@ -246,7 +313,9 @@ export function NetbirdPeersPanel({
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
 
       {data && !notice && data.peers.length === 0 && (
-        <p className="text-xs text-muted-foreground">{t("panel.empty")}</p>
+        <p className="text-xs text-muted-foreground">
+          {data.restricted ? t("panel.emptyRestricted") : t("panel.empty")}
+        </p>
       )}
       {data && !notice && data.peers.length > 0 && shown.length === 0 && (
         <p className="text-xs text-muted-foreground">{t("panel.noMatches")}</p>
@@ -323,6 +392,28 @@ export function NetbirdPeersPanel({
                 <span className="break-all text-[10px] text-muted-foreground">
                   {peer.dnsLabel}
                 </span>
+              )}
+
+              {(peer.loginExpired ||
+                peer.approvalRequired ||
+                peer.sshEnabled) && (
+                <div className="flex flex-wrap gap-1">
+                  {peer.loginExpired && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      {t("panel.loginExpired")}
+                    </Badge>
+                  )}
+                  {peer.approvalRequired && (
+                    <Badge variant="destructive" className="text-[10px]">
+                      {t("panel.approvalRequired")}
+                    </Badge>
+                  )}
+                  {peer.sshEnabled && (
+                    <Badge variant="outline" className="text-[10px]">
+                      {t("panel.netbirdSsh")}
+                    </Badge>
+                  )}
+                </div>
               )}
 
               {peer.groups.length > 0 && (

@@ -34,7 +34,18 @@
     "imported": "Host vorhanden",
     "details": "Details",
     "hideDetails": "Details ausblenden",
-    "selectPeer": "{{name}} auswählen"
+    "selectPeer": "{{name}} auswählen",
+    "forbidden": "NetBird nimmt die Anmeldung an, erlaubt ihr aber nicht, Peers zu lesen. In NetBird können normale Nutzer für Dashboard und API gesperrt sein (Einstellungen, Berechtigungen), oder dem Token fehlen Rechte.",
+    "fallback": "NetBird hat deine eigene Anmeldung abgelehnt, deshalb wird das gemeinsame Service-Token genutzt. Prüfe dein Personal Access Token oder melde dich neu an.",
+    "identity": "NetBird-Nutzer: {{name}} (Rolle {{role}})",
+    "restricted": "NetBird zeigt Nutzern mit der Rolle „user“ nur ihre eigenen Peers. Für alle Peers in NetBird die Rolle admin oder auditor vergeben oder das Service-Token nutzen.",
+    "emptyRestricted": "Diesem NetBird-Nutzer gehören keine Peers. NetBird zeigt Nutzern mit der Rolle „user“ nur ihre eigenen Peers.",
+    "onlyOnline": "Nur online",
+    "group": "Gruppe",
+    "allGroups": "Alle Gruppen",
+    "loginExpired": "Login abgelaufen",
+    "approvalRequired": "Freigabe ausstehend",
+    "netbirdSsh": "NetBird-SSH"
   },
   "reach": {
     "allowed": "SSH {{port}} erlaubt",
@@ -125,7 +136,7 @@
     },
     "userApiToken": {
       "label": "Dein NetBird-Access-Token",
-      "description": "Dein eigenes NetBird Personal Access Token. Wird genutzt, wenn du nicht per SSO angemeldet bist und der Anmeldemodus eine eigene Anmeldung erlaubt."
+      "description": "Dein eigenes NetBird Personal Access Token (beginnt mit nbp_; nur das Token einfügen, ohne „Token“). Wird genutzt, wenn du nicht per SSO angemeldet bist und der Anmeldemodus eine eigene Anmeldung erlaubt. NetBird wendet dann deine Rolle an: Mit der Rolle „user“ siehst du nur deine eigenen Peers."
     }
   },
   "auth": {
@@ -139,7 +150,8 @@
     "failed": "Anmeldung fehlgeschlagen.",
     "notConfigured": "Single Sign-on ist nicht eingerichtet. Ein Admin kann den Identity Provider in den Plugin-Einstellungen eintragen.",
     "redirectUri": "Beim Identity Provider einzutragende Redirect-URI: {{uri}}",
-    "orToken": "Oder hinterlege dein eigenes NetBird-Access-Token in deinen Plugin-Einstellungen."
+    "orToken": "Oder hinterlege dein eigenes NetBird-Access-Token in deinen Plugin-Einstellungen.",
+    "userTokenIgnored": "Dein eigenes Access Token ist gespeichert, wird aber nicht genutzt: Der Anmeldemodus steht auf „Service-Token für alle“. Ein Admin kann ihn auf eigene Anmeldung umstellen."
   },
   "import": {
     "title": "{{count}} Peers als Hosts anlegen",

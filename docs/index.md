@@ -14,6 +14,13 @@ The plugin always reads NetBird as somebody. **Sign-in mode** in the admin setti
 
 An own sign-in is either **single sign-on** (the user clicks _Sign in with SSO_ in the panel) or the user's **own NetBird access token** in their personal plugin settings. With an own sign-in, NetBird applies that user's own permissions: someone who may only see their own peers sees only those in Termix too.
 
+### When your own token shows fewer peers, or none
+
+- **The mode ignores it.** With _Service token for everyone_, an own access token is saved but never used. The panel says so; an admin switches the mode.
+- **Your NetBird role is "user".** NetBird lists a user with that role only the peers they own (devices they logged in themselves). The panel shows your NetBird user and role and explains a short or empty list. For the whole network, give the user the role **admin** or **auditor** in NetBird, or use the service token.
+- **NetBird blocks regular users.** If the NetBird account blocks the dashboard and API for regular users, a valid token gets 403. The panel names this instead of a generic error.
+- **The token was rejected.** Paste only the token (it starts with `nbp_`). The plugin removes a pasted `Token `/`Bearer ` prefix, quotes and line breaks. In _Own sign-in, else service token_, a rejected own token or SSO session falls back to the service token and the panel shows a notice.
+
 ## Set up a service token
 
 1. In NetBird, create a service user and a personal access token for it. Read access is enough: give it the **Auditor** role if your NetBird version has it. The plugin never writes to NetBird.
@@ -77,6 +84,10 @@ Tick peers (or **Select all shown**, which follows the search and leaves out exi
 - **Tag hosts with their NetBird groups**: every host gets the tag `netbird`, and with this option also one tag per NetBird group.
 
 The plugin reads the peers from NetBird again before it creates anything, so it only adds peers your sign-in may see. A peer whose NetBird IP and port already exist as one of your hosts is skipped. The result says how many were added, skipped and failed. The hosts belong to you, as if you had created them yourself.
+
+### Filter the list
+
+Search by name, IP, DNS name, system or group, show only online peers, or pick one NetBird group. Badges mark peers whose login expired, peers waiting for approval and peers running the NetBird SSH server.
 
 ### Peer details
 

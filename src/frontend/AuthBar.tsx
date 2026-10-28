@@ -146,6 +146,14 @@ export function AuthBar({ api, onChange }: Props) {
           </Button>
         )}
       </div>
+      {status.userTokenIgnored && (
+        <p
+          className="text-amber-600 dark:text-amber-400"
+          data-testid="user-token-ignored"
+        >
+          {t("auth.userTokenIgnored")}
+        </p>
+      )}
       {ownSignIn && !status.ssoAvailable && !status.active && (
         <p className="text-muted-foreground">
           {t("auth.notConfigured")} {t("auth.orToken")}

@@ -34,7 +34,18 @@
     "imported": "Host exists",
     "details": "Details",
     "hideDetails": "Hide details",
-    "selectPeer": "Select {{name}}"
+    "selectPeer": "Select {{name}}",
+    "forbidden": "NetBird accepted the sign-in but does not let it list peers. In NetBird, regular users may be blocked from the dashboard and the API (Settings, Permissions), or the token lacks rights.",
+    "fallback": "NetBird rejected your own sign-in, so the shared service token is used. Check your personal access token or sign in again.",
+    "identity": "NetBird user: {{name}} (role {{role}})",
+    "restricted": "NetBird shows users with the role \"user\" only their own peers. To see all peers, give the user the role admin or auditor in NetBird, or use the service token.",
+    "emptyRestricted": "No peers belong to this NetBird user. NetBird shows users with the role \"user\" only their own peers.",
+    "onlyOnline": "Online only",
+    "group": "Group",
+    "allGroups": "All groups",
+    "loginExpired": "Login expired",
+    "approvalRequired": "Waiting for approval",
+    "netbirdSsh": "NetBird SSH"
   },
   "reach": {
     "allowed": "SSH {{port}} allowed",
@@ -125,7 +136,7 @@
     },
     "userApiToken": {
       "label": "Your NetBird access token",
-      "description": "Your own NetBird personal access token. Used when you are not signed in with SSO and the sign-in mode allows an own sign-in."
+      "description": "Your own NetBird personal access token (starts with nbp_; paste only the token, without \"Token\"). Used when you are not signed in with SSO and the sign-in mode allows an own sign-in. NetBird then applies your role: with the role \"user\" you see only your own peers."
     }
   },
   "auth": {
@@ -139,7 +150,8 @@
     "failed": "Sign-in failed.",
     "notConfigured": "Single sign-on is not set up. An admin can enter the identity provider in the plugin settings.",
     "redirectUri": "Redirect URI to register at the identity provider: {{uri}}",
-    "orToken": "Or set your own NetBird access token in your plugin settings."
+    "orToken": "Or set your own NetBird access token in your plugin settings.",
+    "userTokenIgnored": "Your own access token is saved but not used: the sign-in mode is \"service token for everyone\". An admin can switch it to an own sign-in."
   },
   "import": {
     "title": "Add {{count}} peers as hosts",

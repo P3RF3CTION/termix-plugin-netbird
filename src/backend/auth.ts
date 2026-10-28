@@ -38,6 +38,8 @@ export interface NetbirdCredential {
 
 export interface AuthStatus {
   mode: AuthMode;
+  /** The user saved an own token, but the mode is "service", so it is unused. */
+  userTokenIgnored: boolean;
   ssoAvailable: boolean;
   serviceTokenSet: boolean;
   userTokenSet: boolean;
@@ -73,14 +75,28 @@ export async function authMode(ctx: PluginContext): Promise<AuthMode> {
   return raw === "user" || raw === "user-or-service" ? raw : "service";
 }
 
+/**
+ * A token as NetBird expects it after "Token ". People paste it with the
+ * scheme ("Token nbp_...", "Bearer nbp_..."), in quotes or with a line break;
+ * NetBird then answers 401 and the panel stays empty.
+ */
+export function normalizeToken(raw: string | null | undefined): string {
+  let token = (raw ?? "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .trim();
+  token = token.replace(/^(token|bearer)\s+/i, "").trim();
+  return token.replace(/\s+/g, "");
+}
+
 async function serviceToken(ctx: PluginContext): Promise<string> {
-  return ((await ctx.settings.get<string>("apiToken")) ?? "").trim();
+  return normalizeToken(await ctx.settings.get<string>("apiToken"));
 }
 
 async function userToken(ctx: PluginContext, userId: string): Promise<string> {
-  return (
-    (await ctx.settings.getUser<string>(userId, "userApiToken")) ?? ""
-  ).trim();
+  return normalizeToken(
+    await ctx.settings.getUser<string>(userId, "userApiToken"),
+  );
 }
 
 /**
@@ -155,13 +171,19 @@ export async function ssoToken(
   }
 }
 
-/** The credential for this request, or null when nothing usable is set. */
+/**
+ * The credential for this request, or null when nothing usable is set.
+ * serviceOnly skips the user's own sign-in, for the fallback after NetBird
+ * rejected it in the "user-or-service" mode.
+ */
 export async function resolveCredential(
   ctx: PluginContext,
   userId: string,
+  serviceOnly = false,
 ): Promise<NetbirdCredential | null> {
   const mode = await authMode(ctx);
-  if (mode !== "service") {
+  if (serviceOnly && mode !== "user-or-service") return null;
+  if (mode !== "service" && !serviceOnly) {
     const sso = await ssoToken(ctx, userId);
     if (sso) {
       return {
@@ -202,6 +224,7 @@ export async function authStatus(
   else if (mode !== "user" && serviceTokenSet) active = "service";
   return {
     mode,
+    userTokenIgnored: mode === "service" && userTokenSet,
     ssoAvailable,
     serviceTokenSet,
     userTokenSet,
