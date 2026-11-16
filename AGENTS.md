@@ -104,5 +104,11 @@ aren't obvious from the code, and anything that has bitten you before.
   `registry/public-key.txt` is the public half of `TERMIX_PLUGIN_SIGNING_KEY` (repo secret, key
   ID `f693b96cabb971be`). Never edit the index by hand. A new key means every installation has
   to add the registry again.
+- CI: `ci.yml` calls the shared `plugin-ci.yml@main` of Termix-SSH, which changes without a commit
+  here. It runs zizmor on our workflows (high severity fails: permissions only per job, every
+  action outside `Termix-SSH/*` pinned to a commit SHA with the tag as comment) and osv-scanner on
+  the lockfile (every known vulnerability with a fix fails). `overrides` in `package.json` lifts
+  `glob` under `@deadendjs/swagger-jsdoc` (SDK build tool, only uses `glob.sync`) to 14; drop it
+  once the SDK ships a fixed version.
 - Not yet: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes,
   writing to NetBird.

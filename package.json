@@ -57,5 +57,10 @@
   },
   "dependencies": {
     "lucide-react": "^1.61.0"
+  },
+  "overrides": {
+    "@deadendjs/swagger-jsdoc": {
+      "glob": "^14.0.2"
+    }
   }
 }

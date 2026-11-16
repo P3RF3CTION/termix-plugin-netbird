@@ -25,24 +25,24 @@ on:
           - overwrite
           - dry-run
 
-permissions:
-  contents: write
-  # Build provenance, so the community registry can check where the file
-  # was built.
-  id-token: write
-  attestations: write
+# Nothing at the workflow level; every job asks for what it needs.
+permissions: {}
 
 jobs:
   release:
+    permissions:
+      contents: write
+      # Build provenance, so the community registry can check where the file
+      # was built.
+      id-token: write
+      attestations: write
     uses: Termix-SSH/Termix-Registry/.github/workflows/plugin-release.yml@main
     with:
       channel: ${{ inputs.channel }}
       mode: ${{ inputs.mode }}
-    # Bewusst ohne TERMIX_PLUGIN_SIGNING_KEY: "secrets: inherit" erreicht
-    # einen Workflow einer anderen Organisation ohnehin nicht, und der
-    # private Schluessel soll nicht an Code gehen, der auf @main eines
-    # fremden Repos steht. Signiert wird im Job "sign" unten.
-    secrets: inherit
+    # No secrets on purpose: "secrets: inherit" does not reach a workflow of
+    # another organisation anyway, and the private key must not go to code on
+    # @main of a foreign repo. Signing runs in the job "sign" below.
 
   # Signs the file the release job attached, with this repo's own key and the
   # SDK version from package-lock.json, and attaches the .sig.
@@ -50,11 +50,15 @@ jobs:
     needs: release
     if: ${{ inputs.mode != 'dry-run' }}
     runs-on: ubuntu-latest
+    permissions:
+      # gh release upload
+      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-      - uses: actions/setup-node@v7
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: Install the SDK
@@ -83,20 +87,26 @@ jobs:
     needs: sign
     if: ${{ inputs.mode != 'dry-run' }}
     runs-on: ubuntu-latest
+    permissions:
+      # git push of registry/index.json
+      contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
-      - uses: actions/setup-node@v7
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: Write the registry index
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/registry-index.mjs
+      # The token goes to this one step only, not into the git config.
       - name: Commit the index
         env:
           HUSKY: "0"
+          GH_TOKEN: ${{ github.token }}
         run: |
           git add registry/index.json
           if git diff --cached --quiet; then
@@ -106,4 +116,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: update the plugin registry index"
-          git push origin HEAD:main
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
