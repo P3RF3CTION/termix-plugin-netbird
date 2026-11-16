@@ -62,20 +62,28 @@ aren't obvious from the code, and anything that has bitten you before.
 
 - What it does: lists NetBird peers in a sidebar panel (`netbird`), signs the user in to NetBird
   (service token, own PAT or OIDC single sign-on), adds peers as hosts (one through
-  `shell.openHostEditor`, many through `POST /hosts/import`), shows peer details and explains per
-  port which NetBird rule lets the Termix server's own peer reach a peer.
+  `shell.openHostEditor`, many through `POST /hosts/import`), shows peer details, explains per
+  port which NetBird rule lets the Termix server's own peer reach a peer (including the policy's
+  posture checks), and checks the user's own hosts against NetBird (`/hosts/reconcile`: peer gone,
+  NetBird IP changed, offline longer than `staleDays`).
 - How it is put together:
   - `src/backend/oidc.ts`: discovery, PKCE, authorize URL, code exchange, refresh, ID token claim
     checks. Pure apart from `ctx.fetch`; unit tests in `tests/backend/oidc.test.ts`.
   - `src/backend/auth.ts`: which credential a request uses (`sso` → own PAT → service, filtered by
     `authMode`), the in-memory access token cache and the hand-over of a finished sign-in.
   - `src/backend/netbird-api.ts`: GET only, on an allow-list of paths (`/users/current`, `/peers`, `/peers/{id}`,
-    `/peers/{id}/accessible-peers`, `/policies`), only the configured host via `allowPrivateHosts`.
+    `/peers/{id}/accessible-peers`, `/policies`, `/posture-checks`), only the configured host via
+    `allowPrivateHosts`. Posture checks are fetched only when a policy references them.
   - `src/backend/reachability.ts`: pure policy evaluation (`evaluate`, `explain`), tested in
     `tests/backend/reachability.test.ts` and `oidc.test.ts`.
+  - `src/backend/posture.ts`: pure posture check evaluation (client version, OS/kernel version,
+    location; network range and process are "unknown"), tested in `tests/backend/posture.test.ts`.
+  - `src/backend/reconcile.ts`: pure host/peer comparison, tested with the routes in
+    `tests/backend/reconcile.test.ts`.
   - `src/backend/routes.ts`: `/auth/*`, `/peers`, `/peers/:peerId`, `/credentials`,
-    `/hosts/import`; route tests in `tests/backend/routes.test.ts` and `sso-import.test.ts`.
-  - Frontend: `NetbirdPeersPanel.tsx`, `AuthBar.tsx`, `ImportDialog.tsx`, `PeerDetails.tsx`.
+    `/hosts/import`, `/hosts/reconcile` (GET findings, POST actions); route tests in `tests/backend/routes.test.ts` and `sso-import.test.ts`.
+  - Frontend: `NetbirdPeersPanel.tsx`, `AuthBar.tsx`, `ImportDialog.tsx`, `PeerDetails.tsx`,
+    `ReconcileView.tsx` (opens in place of the list; confirms through `app.confirm`).
 - Decisions:
   - SSO is generic OIDC, nothing provider specific. The token goes to NetBird as Bearer, so the
     issuer and client must be ones NetBird accepts; the docs say how to find them.
@@ -95,7 +103,20 @@ aren't obvious from the code, and anything that has bitten you before.
   - New hosts use the NetBird IP, not the DNS label: the label only resolves where NetBird DNS is
     on, and servers often run with `--disable-dns`.
   - A 403 on `/policies` (NetBird user roles) degrades to "not checked" instead of failing the list.
-  - The check reads policies only. Posture checks are flagged, not evaluated.
+  - Posture checks apply to the source side of a rule: the Termix peer for a forward rule, the
+    target peer for a reverse (bidirectional) one. A policy whose checks fail does not count; if
+    every allowing policy fails, the peer is "blocked" with posture "fail". An OS family missing
+    from an OS check fails, as in NetBird. What the API cannot show (network range, processes,
+    unreadable checks) is "unknown", never pass or fail.
+  - Host check: only the user's own hosts (`listOwned`) that belong to NetBird (peer id in the
+    notes the import writes, tag `netbird` on a 100.64.0.0/10 IP, or a peer's NetBird IP). The POST
+    recomputes the findings and runs only actions the server found; every change is audited
+    (`netbird_host_ip_updated`, `netbird_host_removed`). A missing peer is only offered for removal
+    when the credential sees every peer (`/users/current` role not `user`): a NetBird user sees just
+    their own peers. An IP update that would duplicate another host's ip:port is skipped.
+    Permission `peers.reconcile`; removal also needs core `hosts.delete`.
+  - UI stays on plugin API `^1.8`: `LoadingState` (1.15) and `ToolbarSelect` (1.16) would raise the
+    Termix minimum, so `validate` still lists those `ui` hints.
 - Distribution: the repo is its own Termix plugin registry. `registry/index.json` is written by
   `scripts/registry-index.mjs` (job `registry` in `release.yml`) from the signed release files.
   Signing runs in this repo (job `sign`), not in the shared Termix-SSH release workflow:

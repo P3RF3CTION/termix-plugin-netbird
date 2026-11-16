@@ -9,10 +9,13 @@ import { NetbirdPeersPanel } from "./NetbirdPeersPanel";
 export function activate(app: TermixApp): void {
   function Panel({ shell }: PanelProps) {
     const canImport = usePermission("peers.import");
+    const canReconcile = usePermission("peers.reconcile");
     return (
       <NetbirdPeersPanel
         api={app.api}
         canImport={canImport}
+        canReconcile={canReconcile}
+        confirm={(options) => app.confirm(options)}
         onAddHost={
           shell.openHostEditor
             ? (draft) => shell.openHostEditor!(draft)

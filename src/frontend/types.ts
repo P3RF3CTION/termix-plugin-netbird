@@ -2,6 +2,22 @@
 
 export type CredentialSource = "sso" | "user" | "service";
 export type ReachabilityState = "allowed" | "blocked" | "unknown" | "self";
+export type PostureSummary = "none" | "pass" | "unknown" | "fail";
+export type PostureState = "pass" | "fail" | "unknown";
+
+export interface PostureFinding {
+  check: string;
+  kind: "version" | "os" | "geo" | "network" | "process" | "missing";
+  state: PostureState;
+  required: string;
+  actual: string;
+}
+
+export interface PostureResult {
+  state: PostureState;
+  peer: string;
+  findings: PostureFinding[];
+}
 
 export interface PeerView {
   id: string;
@@ -17,6 +33,8 @@ export interface PeerView {
     state: ReachabilityState;
     policies: string[];
     postureChecks: boolean;
+    /** Older backends leave it out. */
+    posture?: PostureSummary;
   };
   imported: boolean;
   sshEnabled: boolean;
@@ -63,6 +81,7 @@ export interface RuleMatch {
   bidirectional: boolean;
   direction: "forward" | "reverse";
   postureChecks: boolean;
+  posture?: PostureResult | null;
   disabled: boolean;
 }
 
@@ -94,6 +113,7 @@ export interface PeerDetail {
       port: number;
       state: ReachabilityState;
       allowedBy: RuleMatch[];
+      postureBlocked?: boolean;
     }>;
     otherPorts: RuleMatch[];
     disabled: RuleMatch[];
@@ -110,4 +130,36 @@ export interface ImportResult {
   created: Array<{ peerId: string; hostId: number; name: string }>;
   skipped: Array<{ peerId: string; reason: string }>;
   failed: Array<{ peerId: string }>;
+}
+
+export type FindingKind = "missing" | "ip-changed" | "stale" | "offline";
+export type ReconcileAction = "update-ip" | "delete";
+
+export interface HostFinding {
+  hostId: number;
+  hostName: string;
+  hostIp: string;
+  port: number;
+  kind: FindingKind;
+  peerId: string | null;
+  peerName: string | null;
+  peerIp: string | null;
+  lastSeen: string | null;
+  loginExpired: boolean;
+  offlineDays: number | null;
+  certain: boolean;
+  actions: ReconcileAction[];
+}
+
+export interface ReconcileResponse {
+  findings: HostFinding[];
+  complete: boolean;
+  staleDays: number;
+}
+
+export interface ReconcileApplyResult {
+  updated: Array<{ hostId: number; ip: string }>;
+  deleted: Array<{ hostId: number }>;
+  skipped: Array<{ hostId: number; reason: string }>;
+  failed: Array<{ hostId: number }>;
 }

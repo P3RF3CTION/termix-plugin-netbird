@@ -50,10 +50,13 @@
   "reach": {
     "allowed": "SSH {{port}} erlaubt",
     "allowedBy": "Erlaubt durch: {{policies}}",
-    "postureChecks": "Es gelten Posture Checks, die die Verbindung trotzdem blockieren können.",
     "blocked": "Keine Richtlinie erlaubt SSH {{port}}",
     "blockedHint": "Keine NetBird-Richtlinie erlaubt dem Termix-Peer TCP {{port}} zu diesem Peer.",
-    "unknown": "Nicht geprüft"
+    "unknown": "Nicht geprüft",
+    "posturePass": "Die Posture Checks der erlaubenden Richtlinie sind erfüllt.",
+    "postureUnknown": "Es gelten Posture Checks, die die NetBird-API nicht beantworten kann (Netzbereich, Prozesse oder die Checks sind nicht lesbar); sie können die Verbindung trotzdem blockieren.",
+    "postureBlocked": "SSH {{port}} durch Posture Checks blockiert",
+    "postureBlockedHint": "Eine Richtlinie erlaubt den Port ({{policies}}), ihre Posture Checks schlagen aber fehl, daher nimmt NetBird den Peer aus."
   },
   "permissions": {
     "peers": {
@@ -64,6 +67,10 @@
       "import": {
         "title": "NetBird-Peers als Hosts übernehmen",
         "description": "Ausgewählte NetBird-Peers als Hosts des Nutzers anlegen."
+      },
+      "reconcile": {
+        "title": "NetBird-Hosts prüfen und bereinigen",
+        "description": "Eigene Hosts mit den NetBird-Peers vergleichen, geänderte NetBird-IPs übernehmen und Hosts entfernen, deren Peer gelöscht oder veraltet ist. Zum Entfernen ist zusätzlich die Berechtigung hosts.delete nötig."
       }
     }
   },
@@ -71,7 +78,8 @@
     "group": {
       "api": "NetBird-API",
       "check": "Erreichbarkeitsprüfung",
-      "sso": "Single Sign-on (OpenID Connect)"
+      "sso": "Single Sign-on (OpenID Connect)",
+      "hosts": "Host-Abgleich"
     },
     "managementUrl": {
       "label": "Management-URL",
@@ -137,6 +145,10 @@
     "userApiToken": {
       "label": "Dein NetBird-Access-Token",
       "description": "Dein eigenes NetBird Personal Access Token (beginnt mit nbp_; nur das Token einfügen, ohne „Token“). Wird genutzt, wenn du nicht per SSO angemeldet bist und der Anmeldemodus eine eigene Anmeldung erlaubt. NetBird wendet dann deine Rolle an: Mit der Rolle „user“ siehst du nur deine eigenen Peers."
+    },
+    "staleDays": {
+      "label": "Offline-Tage, ab denen ein Host als veraltet gilt",
+      "description": "Der Host-Abgleich bietet an, Hosts zu entfernen, deren Peer länger offline ist. 0 schaltet das ab."
     }
   },
   "auth": {
@@ -196,6 +208,60 @@
     "ruleLine": "{{policy}} · {{protocol}} {{ports}}",
     "reverse": "über bidirektionale Regel",
     "posture": "Posture Checks gelten",
-    "noTermixPeer": "Lege in den Einstellungen den Termix-Peer fest, um zu sehen, welche Richtlinie diesen Peer erreicht."
+    "noTermixPeer": "Lege in den Einstellungen den Termix-Peer fest, um zu sehen, welche Richtlinie diesen Peer erreicht.",
+    "portPostureBlocked": "Port {{port}}: von einer Regel erlaubt, aber durch deren Posture Checks blockiert"
+  },
+  "posture": {
+    "state": {
+      "pass": "✓",
+      "fail": "✗",
+      "unknown": "?"
+    },
+    "summary": {
+      "pass": "Posture Checks für {{peer}} erfüllt",
+      "fail": "Posture Checks für {{peer}} nicht erfüllt",
+      "unknown": "Posture Checks für {{peer}} nicht entscheidbar"
+    },
+    "kind": {
+      "version": "NetBird-Client {{actual}}, benötigt {{required}} oder neuer",
+      "os": "Betriebssystem {{actual}}, benötigt {{required}}",
+      "geo": "Standort {{actual}}, Regel: {{required}}",
+      "network": "Netzbereich ({{required}}) ist in der API nicht sichtbar",
+      "process": "Prozessprüfung ({{required}} Prozesse) ist in der API nicht sichtbar",
+      "missing": "der Posture Check ist nicht lesbar (NetBird-Rolle) oder existiert nicht mehr"
+    },
+    "notReported": "nicht gemeldet"
+  },
+  "reconcile": {
+    "open": "Hosts mit NetBird abgleichen",
+    "back": "Zurück zu den Peers",
+    "title": "Host-Abgleich",
+    "intro": "Deine eigenen Hosts, die zu NetBird gehören, verglichen mit den Peers, die NetBird jetzt listet. Länger als {{days}} Tage offline gilt als veraltet.",
+    "introNoStale": "Deine eigenen Hosts, die zu NetBird gehören, verglichen mit den Peers, die NetBird jetzt listet. Die Erkennung veralteter Hosts ist aus (0 Tage).",
+    "incomplete": "Deine NetBird-Anmeldung sieht nicht alle Peers (Rolle „user“ oder unbekannt). Ein Host, dessen Peer nicht gelistet ist, ist vielleicht nur verborgen und wird daher nicht zum Entfernen angeboten.",
+    "clean": "Alle NetBird-Hosts passen zu ihren Peers.",
+    "kind": {
+      "missing": "Peer gelöscht ({{count}})",
+      "ip-changed": "NetBird-IP geändert ({{count}})",
+      "stale": "Lange offline ({{count}})",
+      "offline": "Offline ({{count}})"
+    },
+    "missing": "NetBird listet den Peer {{peer}} nicht mehr.",
+    "missingUncertain": "Der Peer ist für deine NetBird-Anmeldung nicht gelistet.",
+    "ipChanged": "Der Peer {{peer}} hat jetzt die NetBird-IP {{ip}}.",
+    "offlineDays": "Der Peer {{peer}} wurde zuletzt vor {{days}} Tagen gesehen.",
+    "offlineUnknown": "Der Peer {{peer}} ist offline; NetBird sagt nicht, seit wann.",
+    "loginExpired": "Die Anmeldung des Peers ist abgelaufen.",
+    "action": {
+      "update-ip": "Aktion: neue NetBird-IP eintragen",
+      "delete": "Aktion: Host entfernen"
+    },
+    "select": "{{name}} auswählen",
+    "apply": "Ausführen",
+    "confirmTitle": "Hosts ändern?",
+    "confirmText": "{{updates}} Host(s) erhalten die neue NetBird-IP, {{removals}} Host(s) werden entfernt. Entfernte Hosts lassen sich nicht wiederherstellen.",
+    "result": "{{updated}} aktualisiert, {{deleted}} entfernt, {{skipped}} übersprungen, {{failed}} fehlgeschlagen",
+    "applyFailed": "Die Hosts konnten nicht geändert werden.",
+    "missingIp": "Kein NetBird-Peer hat diese NetBird-IP mehr (der Host trägt das Tag „netbird“)."
   }
 }

@@ -19,6 +19,8 @@
 - **Add hosts, one or many.** One click opens the host editor with name, NetBird IP and SSH port filled in. Or tick several peers and add them in one go, into a folder, with username, port, a saved login and tags from the NetBird groups. Peers that already are a host are skipped.
 - **Peer details.** NetBird version, system, public address and location, login expiry, approval state, NetBird SSH server and DNS names.
 - **Reachability and why.** For each peer the plugin reads your NetBird access policies and tells you whether the Termix server may open its SSH port, and which rule allows it. The details also list rules on other ports and matching rules that are switched off. You know why a connection fails before you read a timeout.
+- **Posture checks.** NetBird client version, OS version and location checks of the allowing policy are evaluated, so a peer that NetBird leaves out because of a failed check shows as blocked, with the reason.
+- **Host check.** Finds your hosts whose NetBird peer is gone, got a new NetBird IP or has been offline for weeks, and updates or removes them after you confirm. Every change goes to the audit log.
 
 It works with NetBird Cloud and with a self-hosted management server. It only reads from NetBird and changes nothing there.
 
@@ -92,7 +94,7 @@ Open **NetBird** in the sidebar. With an own sign-in mode, click **Sign in with 
 
 Tick peers and click **Add selected as hosts** to add them in bulk. **Details** opens the peer details and the access explanation.
 
-The check reads the policies; it does not open a connection. A connection the policies allow can still fail when the peer is offline, a firewall on the host blocks the port, or a posture check fails.
+The check reads the policies; it does not open a connection. Posture checks (client version, OS, location) are evaluated; network range and process checks are not visible in the API. A connection the policies allow can still fail when the peer is offline or a firewall on the host blocks the port.
 
 <br />
 
@@ -113,8 +115,9 @@ The check reads the policies; it does not open a connection. A connection the po
 ## Privacy and security
 
 - The plugin talks only to the Management URL and the identity provider you set. No telemetry, no other servers.
-- It reads NetBird peers and policies and never writes to NetBird.
+- It reads NetBird peers, policies and posture checks and never writes to NetBird.
 - Single sign-on uses the authorization code flow with PKCE, a nonce and a single-use state. The refresh token is stored encrypted per user; the access token stays in server memory. **Sign out** deletes both.
+- The host check changes or removes only the user's own hosts, only after a confirmation, and only actions the server finds itself; each change is in the audit log. A sign-in that does not see every peer never gets a removal offered for a missing peer.
 - Hosts are created only on an explicit import, as the user who imports them, and only for peers that user's NetBird sign-in can see. The plugin sees names and usernames of saved logins, never their secrets.
 - The service token is stored encrypted on the Termix server and never sent to the browser. If it leaks, it reveals your peers and policies; revoke it in NetBird.
 

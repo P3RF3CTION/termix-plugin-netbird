@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+### Added
+
+- Host check: compares your own NetBird hosts with the peers NetBird lists now and finds hosts whose peer is gone, whose NetBird IP changed or whose peer has been offline longer than a configurable number of days (30 by default). Changed IPs can be updated and stale hosts removed after a confirmation; the server re-checks every action and writes it to the audit log. New permission "Check and clean up NetBird hosts"
+- The reachability check evaluates posture checks: NetBird client version, OS or kernel version and location. A peer that every allowing policy leaves out because of failed posture checks shows as blocked, and the peer details list each posture check with its result. Network range and process checks are shown as not decidable, because the API does not show them
+
+### Security
+
+- CI: workflow permissions per job, actions pinned to commit SHAs, no inherited secrets, and an override for vulnerable glob/minimatch versions in the SDK's build tools
+
 ## 1.2.0
 
 ### Added

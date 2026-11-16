@@ -57,14 +57,17 @@ If the sign-in fails, the pop-up says so and the reason is in the Termix log. Th
 - **SSH port**: the port to check and to put into new hosts, `22` by default.
 - **Ports to check**: more ports for the access explanation in the peer details, for example `3389, 5900`.
 
+- **Offline days before a host counts as stale** (group **Host check**): the host check offers to remove hosts whose peer has been offline for longer, `30` by default; `0` switches that off.
+
 The check needs an account that may read NetBird policies. If the account may not (a NetBird user role often may not), the panel still lists peers and says that reachability is not checked.
 
 ## Permissions
 
-| Permission                        | Default | Allows                                                  |
-| --------------------------------- | ------- | ------------------------------------------------------- |
-| **View NetBird peers**            | admins  | The panel, the peer details and the sign-in             |
-| **Import NetBird peers as hosts** | admins  | Selecting peers and adding them as the user's own hosts |
+| Permission                           | Default | Allows                                                                                                                       |
+| ------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **View NetBird peers**               | admins  | The panel, the peer details and the sign-in                                                                                  |
+| **Import NetBird peers as hosts**    | admins  | Selecting peers and adding them as the user's own hosts                                                                      |
+| **Check and clean up NetBird hosts** | admins  | The host check: update changed NetBird IPs and remove stale hosts (removing also needs the core **hosts.delete** permission) |
 
 Only admins get them by default, because with a service token the list is a full inventory of your network.
 
@@ -85,6 +88,19 @@ Tick peers (or **Select all shown**, which follows the search and leaves out exi
 
 The plugin reads the peers from NetBird again before it creates anything, so it only adds peers your sign-in may see. A peer whose NetBird IP and port already exist as one of your hosts is skipped. The result says how many were added, skipped and failed. The hosts belong to you, as if you had created them yourself.
 
+### Check your hosts against NetBird
+
+The list icon next to refresh (with **Check and clean up NetBird hosts**) opens the host check. It compares your own hosts that belong to NetBird (added by this plugin, tagged `netbird`, or on a peer's NetBird IP) with the peers NetBird lists now:
+
+- **Peer gone**: the host was imported for a peer NetBird no longer lists. Offered for removal.
+- **NetBird IP changed**: the peer still exists but has another NetBird IP. Offered: set the new IP.
+- **Offline for a long time**: the peer has been offline longer than the configured days. Offered for removal.
+- **Offline**: offline, but not that long. Shown only.
+
+Tick the hosts and click **Apply**; Termix asks before anything changes. The server works out the findings again and only carries out actions it found itself, and every change goes to the audit log (`netbird_host_ip_updated`, `netbird_host_removed`). Removed hosts cannot be restored.
+
+A NetBird account with the role `user` sees only its own peers. With such a sign-in (or when NetBird does not say the role) a host whose peer is not listed may only be hidden, so it is shown but never offered for removal.
+
 ### Filter the list
 
 Search by name, IP, DNS name, system or group, show only online peers, or pick one NetBird group. Badges mark peers whose login expired, peers waiting for approval and peers running the NetBird SSH server.
@@ -93,21 +109,34 @@ Search by name, IP, DNS name, system or group, show only online peers, or pick o
 
 **Details** on a peer shows the NetBird version, system, public address and location, last login and login expiry, whether the peer waits for approval, whether the NetBird SSH server is on, its DNS names and how many peers it can reach.
 
-Under **Access from the Termix peer** it lists, per checked port, the rules that allow it (policy, protocol and ports, and whether it works through a bidirectional rule or has posture checks), the rules between the two peers on other ports, and matching rules that are switched off. That is usually the answer to "why can I not connect".
+Under **Access from the Termix peer** it lists, per checked port, the rules that allow it (policy, protocol and ports, whether it works through a bidirectional rule, and the result of its posture checks), the rules between the two peers on other ports, and matching rules that are switched off. That is usually the answer to "why can I not connect".
 
 ### How the check decides
 
-The check reads the policies, it does not open a connection. A rule counts when it is enabled, accepts traffic, uses TCP or all protocols, covers the port (single ports, ranges or no port limit) and either goes from a group of the Termix peer to a group of the target (or to the peer itself as a destination resource) or is bidirectional the other way round. An offline peer, a host firewall or a posture check can still block a connection the policies allow.
+The check reads the policies, it does not open a connection. A rule counts when it is enabled, accepts traffic, uses TCP or all protocols, covers the port (single ports, ranges or no port limit) and either goes from a group of the Termix peer to a group of the target (or to the peer itself as a destination resource) or is bidirectional the other way round. An offline peer or a host firewall can still block a connection the policies allow.
+
+### Posture checks
+
+NetBird applies a policy's posture checks to the peers on the source side of its rules: a peer that fails them is left out. The check evaluates them for the Termix peer, or for the target peer when only a bidirectional rule connects them the other way round:
+
+| Check                    | Evaluated with                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| NetBird client version   | the peer's client version                                                                                                      |
+| OS version               | macOS, iOS, Android: the OS version; Linux and Windows: the kernel version. An OS the check does not list fails, as in NetBird |
+| Location                 | the peer's country and city (allow or deny list)                                                                               |
+| Network range, processes | not visible in the API: shown as "not decidable"                                                                               |
+
+When every allowing policy fails its posture checks, the peer shows **blocked by posture checks**; when a policy allows the port only through checks that cannot be decided, the badge is amber. The posture checks are read only when a policy uses them; an account that may read policies but not posture checks gets "not decidable".
 
 ## Privacy and security
 
 - The plugin talks only to the management URL and the identity provider you set. No telemetry.
-- It only reads NetBird (peers, one peer, its reachable peers, policies). It never writes there.
+- It only reads NetBird (peers, one peer, its reachable peers, policies, posture checks). It never writes there.
 - Capabilities:
   - `network:outbound`: the NetBird API and the identity provider.
   - `network:serve`: the panel's routes. All but the sign-in callback need **View NetBird peers**; the callback only accepts a single-use state that a signed-in user started less than ten minutes before.
   - `ui:surface`: the panel.
-  - `hosts:read`, `hosts:write`: mark existing hosts and create hosts on import, always as the acting user.
+  - `hosts:read`, `hosts:write`: mark existing hosts, create hosts on import, and update or remove the user's own hosts in the host check, always as the acting user.
   - `credentials:use`: list the user's own saved logins (name and username only) for the import.
   - `kv:own`, `secrets:own`: the sign-in state and the encrypted refresh token.
 - Use a read-only service token. If it leaks, it shows your network's peers and policies, nothing more.
