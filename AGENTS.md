@@ -109,6 +109,12 @@ aren't obvious from the code, and anything that has bitten you before.
   action outside `Termix-SSH/*` pinned to a commit SHA with the tag as comment) and osv-scanner on
   the lockfile (every known vulnerability with a fix fails). `overrides` in `package.json` lifts
   `glob` under `@deadendjs/swagger-jsdoc` (SDK build tool, only uses `glob.sync`) to 14; drop it
-  once the SDK ships a fixed version.
+  once the SDK ships a fixed version. CI also runs weekly on Monday, so drift in the shared
+  workflow shows on main first. Dependabot (`.github/dependabot.yml`, one week cooldown) bumps the
+  action SHAs and npm, but not an SDK major: that one changes the plugin API and `engine` too.
+- Release jobs `sign`/`registry` find the release by the manifest version (`X.Y.Z` or the newest
+  `X.Y.Z-beta.N`), not by "newest release"; `concurrency: release` keeps runs from overlapping.
+  Leave the `release` job (the `uses:` of Termix-SSH) as the template has it: the community
+  registry checks provenance against it.
 - Not yet: NetBird SSH as an auth type (would need `auth:provide`), network resources/routes,
   writing to NetBird.

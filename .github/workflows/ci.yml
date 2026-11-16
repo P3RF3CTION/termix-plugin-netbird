@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The shared plugin-ci.yml on Termix-SSH main and the vulnerability
+  # databases change without a commit here. A weekly run shows that on main
+  # before the next change runs into it.
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read

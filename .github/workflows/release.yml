@@ -28,6 +28,12 @@ on:
 # Nothing at the workflow level; every job asks for what it needs.
 permissions: {}
 
+# One release at a time: sign and registry look the release up by version,
+# and two runs at once would race on the tag and on the push to main.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     permissions:
@@ -54,9 +60,12 @@ jobs:
       # gh release upload
       contents: write
     steps:
+      # The version to sign comes from manifest.json at this ref. A stable
+      # release merges the dev branch into main and deletes it, so read main;
+      # a beta or an overwrite leaves main alone, so read the commit it ran on.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ (inputs.channel == 'stable' && inputs.mode == 'release') && 'main' || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -69,12 +78,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TERMIX_PLUGIN_SIGNING_KEY: ${{ secrets.TERMIX_PLUGIN_SIGNING_KEY }}
+          CHANNEL: ${{ inputs.channel }}
         run: |
           if [ -z "$TERMIX_PLUGIN_SIGNING_KEY" ]; then
             echo "::error::TERMIX_PLUGIN_SIGNING_KEY is not set"
             exit 1
           fi
-          tag=$(gh release list --limit 1 --json tagName -q '.[0].tagName')
+          # The release of this run's version, not whichever release is newest:
+          # X.Y.Z for stable, the newest X.Y.Z-beta.N for beta (with or
+          # without a leading v).
+          VERSION=$(node -p 'require("./manifest.json").version')
+          export VERSION
+          if [ "$CHANNEL" = "beta" ]; then
+            filter='[.[] | select(.isPrerelease and ((.tagName | ltrimstr("v")) | startswith(env.VERSION + "-beta.")))] | sort_by(.createdAt) | last | .tagName // empty'
+          else
+            filter='[.[] | select((.tagName | ltrimstr("v")) == env.VERSION)] | first | .tagName // empty'
+          fi
+          tag=$(gh release list --limit 100 --json tagName,isPrerelease,createdAt -q "$filter")
+          if [ -z "$tag" ]; then
+            echo "::error::no $CHANNEL release found for version $VERSION"
+            exit 1
+          fi
+          echo "signing release $tag"
           mkdir -p signed
           gh release download "$tag" --pattern '*.tmxplug' --dir signed --clobber
           npx termix-plugin sign signed/*.tmxplug
