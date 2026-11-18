@@ -14,11 +14,19 @@ interface Props {
   onChange: () => void;
 }
 
+/** How often and how long the panel looks for a finished sign-in. */
+const POLL_MS = 2_000;
+const POLL_LIMIT_MS = 10 * 60_000;
+
 /**
- * Shows which credential the panel uses and offers single sign-on. The login
- * runs in a window: the IdP redirects back to the plugin's callback, which
- * posts a message to this window and closes itself. A user who already has
- * a session at the IdP sees the window close right away.
+ * Shows which credential the panel uses and offers single sign-on.
+ *
+ * Plugin API 2 runs this panel in a sandboxed frame: window.open goes to the
+ * Termix shell, which opens the IdP in a new tab without an opener, and only
+ * right after a click. So the login URL is fetched inside the click and
+ * opened at once, and the panel asks the server for the sign-in state until
+ * the callback has stored the session (or ten minutes have passed). A user
+ * who already has a session at the IdP sees the tab finish right away.
  */
 export function AuthBar({ api, onChange }: Props) {
   const { t } = useTranslation();
@@ -31,56 +39,53 @@ export function AuthBar({ api, onChange }: Props) {
     try {
       const response = await api.get<AuthStatus>("/auth/status");
       setStatus(response.data);
+      return response.data;
     } catch {
       setStatus(null);
+      return null;
     }
   }, [api]);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current !== null) window.clearInterval(pollRef.current);
+    pollRef.current = null;
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data as { type?: string; ok?: boolean } | null;
-      if (!data || data.type !== "netbird-sso") return;
-      if (!data.ok) toast.error(t("auth.failed"));
-      void load().then(onChange);
-    };
-    window.addEventListener("message", onMessage);
-    return () => {
-      window.removeEventListener("message", onMessage);
-      if (pollRef.current !== null) window.clearInterval(pollRef.current);
-    };
-  }, [load, onChange, t, toast]);
+  useEffect(() => stopPolling, [stopPolling]);
 
   const signIn = async () => {
-    // Open the window inside the click, so pop-up blockers allow it, and
-    // point it at the IdP once the URL is known.
-    const popup = window.open("", "netbird-sso", "width=520,height=700");
-    if (!popup) {
-      toast.error(t("auth.popupBlocked"));
-      return;
-    }
     setBusy(true);
+    let url: string;
     try {
       const response = await api.post<{ url: string }>("/auth/login");
-      popup.location.href = response.data.url;
-      if (pollRef.current !== null) window.clearInterval(pollRef.current);
-      pollRef.current = window.setInterval(() => {
-        if (popup.closed) {
-          window.clearInterval(pollRef.current!);
-          pollRef.current = null;
-          setBusy(false);
-          void load().then(onChange);
-        }
-      }, 700);
+      url = response.data.url;
     } catch {
-      popup.close();
       setBusy(false);
       toast.error(t("auth.failed"));
+      return;
     }
+    // In a frame this returns null and the shell opens the tab.
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast.info(t("auth.continueInTab"));
+
+    stopPolling();
+    const started = Date.now();
+    pollRef.current = window.setInterval(() => {
+      void load().then((next) => {
+        if (next?.ssoSignedIn) {
+          stopPolling();
+          setBusy(false);
+          onChange();
+        } else if (Date.now() - started > POLL_LIMIT_MS) {
+          stopPolling();
+          setBusy(false);
+        }
+      });
+    }, POLL_MS);
   };
 
   const signOut = async () => {

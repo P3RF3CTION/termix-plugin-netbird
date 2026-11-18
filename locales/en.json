@@ -158,12 +158,12 @@
     "signedIn": "Signed in with SSO",
     "usingUserToken": "Using your own NetBird token",
     "usingService": "Using the shared service token",
-    "popupBlocked": "The sign-in window was blocked. Allow pop-ups for Termix and try again.",
     "failed": "Sign-in failed.",
     "notConfigured": "Single sign-on is not set up. An admin can enter the identity provider in the plugin settings.",
     "redirectUri": "Redirect URI to register at the identity provider: {{uri}}",
     "orToken": "Or set your own NetBird access token in your plugin settings.",
-    "userTokenIgnored": "Your own access token is saved but not used: the sign-in mode is \"service token for everyone\". An admin can switch it to an own sign-in."
+    "userTokenIgnored": "Your own access token is saved but not used: the sign-in mode is \"service token for everyone\". An admin can switch it to an own sign-in.",
+    "continueInTab": "Continue the sign-in in the new tab. This panel updates when it is done."
   },
   "import": {
     "title": "Add {{count}} peers as hosts",

@@ -16,8 +16,10 @@ export function activate(app: TermixApp): void {
         canImport={canImport}
         canReconcile={canReconcile}
         confirm={(options) => app.confirm(options)}
+        // A panel in a frame (plugin API 2) gets no shell handle, so the
+        // single "add as host" button needs the host editor from the page.
         onAddHost={
-          shell.openHostEditor
+          shell?.openHostEditor
             ? (draft) => shell.openHostEditor!(draft)
             : undefined
         }

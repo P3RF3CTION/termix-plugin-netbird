@@ -28,7 +28,7 @@ It works with NetBird Cloud and with a self-hosted management server. It only re
 
 ## Requirements
 
-- Termix 26.10.3 or newer, and an admin account in it
+- Termix 26.11.2 or newer (plugin API 2), and an admin account in it. For Termix 26.10.3 to 26.11.1 use version 1.2.0
 - A NetBird network (Cloud or self-hosted), and either the right to create a service user there or an identity provider NetBird signs in with
 - For the reachability check: the Termix server is itself a NetBird peer
 
