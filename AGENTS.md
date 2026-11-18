@@ -115,8 +115,13 @@ aren't obvious from the code, and anything that has bitten you before.
     when the credential sees every peer (`/users/current` role not `user`): a NetBird user sees just
     their own peers. An IP update that would duplicate another host's ip:port is skipped.
     Permission `peers.reconcile`; removal also needs core `hosts.delete`.
-  - UI stays on plugin API `^1.8`: `LoadingState` (1.15) and `ToolbarSelect` (1.16) would raise the
-    Termix minimum, so `validate` still lists those `ui` hints.
+  - Plugin API 2 (since 2.0.0, Termix 26.11.2): the backend runs in its own process (tests use
+    `createMockCtx({ sandbox: true })`), the panel in a sandboxed frame (`tests/frontend/frame.test.tsx`
+    with `checkFrameApp`/`checkFrameViews`). No `sandbox` block: no timers, events or registry keys.
+    In a frame `window.open` goes to the shell (new tab, no opener, only within 5 s of a click), so SSO
+    fetches the URL in the click and then polls `/auth/status`; the callback page has no script.
+    The panel gets no `shell` handle in a frame. The group filter is still a native `select`
+    (`validate` hint): `ToolbarSelect` takes no empty value for "all groups".
 - Distribution: the repo is its own Termix plugin registry. `registry/index.json` is written by
   `scripts/registry-index.mjs` (job `registry` in `release.yml`) from the signed release files.
   Signing runs in this repo (job `sign`), not in the shared Termix-SSH release workflow:

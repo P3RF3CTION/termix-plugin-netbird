@@ -173,13 +173,13 @@ function sendError(res: Response, err: unknown, ctx: PluginContext) {
   return res.status(502).json({ error: "api" });
 }
 
-function callbackPage(ok: boolean, message: string, origin: string): string {
-  // No user or IdP text is placed in the page except the fixed message.
-  const payload = JSON.stringify({ type: "netbird-sso", ok });
-  const target = JSON.stringify(origin);
+function callbackPage(message: string): string {
+  // Plugin API 2: Termix opens the IdP in a tab of its own, without an
+  // opener, so there is nobody to post a message to. The panel asks
+  // /auth/status until the session is there. The page holds only a fixed
+  // message and no script.
   return `<!doctype html><html><head><meta charset="utf-8"><title>NetBird</title></head><body style="font-family:sans-serif;padding:2rem">
 <p>${message}</p>
-<script>try{if(window.opener){window.opener.postMessage(${payload},${target});}}catch(e){}setTimeout(function(){window.close();},${ok ? 300 : 4000});</script>
 </body></html>`;
 }
 
@@ -231,7 +231,7 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
    *     summary: Start single sign-on
    *     description: >
    *       Returns the identity provider's authorization URL (code flow with PKCE)
-   *       for a login window. The state is single use and expires after ten
+   *       for a login tab. The state is single use and expires after ten
    *       minutes. Requires netbird.peers.view.
    *     tags:
    *       - NetBird
@@ -276,7 +276,7 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
    *   get:
    *     summary: Single sign-on callback (redirect URI)
    *     description: >
-   *       The identity provider redirects the login window here. Public, because
+   *       The identity provider redirects the login tab here. Public, because
    *       the IdP calls it: the single-use state binds the answer to the Termix
    *       user who started the login. Exchanges the code with PKCE, checks the ID
    *       token's issuer, audience and nonce, and stores the refresh token
@@ -295,17 +295,20 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
    *           type: string
    *     responses:
    *       200:
-   *         description: A small page that tells the opener and closes itself.
+   *         description: A small page that says the sign-in is done; the panel picks up the session itself.
    *       400:
    *         description: Unknown, expired or used state, or the IdP returned an error.
    */
   router.get(CALLBACK_PATH, async (req: Request, res: Response) => {
-    const origin = new URL(ctx.http.baseUrl(req)).origin;
     const state = typeof req.query.state === "string" ? req.query.state : "";
     const code = typeof req.query.code === "string" ? req.query.code : "";
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+    );
 
     const key = `${STATE_PREFIX}${state}`;
     const login =
@@ -316,13 +319,11 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       return res
         .status(400)
         .send(
-          callbackPage(false, "Sign-in expired. Please try again.", origin),
+          callbackPage("Sign-in expired. Please start it again in Termix."),
         );
     }
     if (!code || typeof req.query.error === "string") {
-      return res
-        .status(400)
-        .send(callbackPage(false, "Sign-in was cancelled.", origin));
+      return res.status(400).send(callbackPage("Sign-in was cancelled."));
     }
 
     try {
@@ -346,19 +347,15 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
       await ctx.kv.set(`${DONE_PREFIX}${login.userId}`, finished);
       cacheToken(login.userId, token, tokens.expires_in);
       return res.send(
-        callbackPage(true, "Signed in. You can close this window.", origin),
+        callbackPage(
+          "Signed in. You can close this tab and go back to Termix.",
+        ),
       );
     } catch (err) {
       ctx.log.warn(`SSO callback failed: ${(err as Error).message}`);
       return res
         .status(400)
-        .send(
-          callbackPage(
-            false,
-            "Sign-in failed. The Termix log has the reason.",
-            origin,
-          ),
-        );
+        .send(callbackPage("Sign-in failed. The Termix log has the reason."));
     }
   });
 

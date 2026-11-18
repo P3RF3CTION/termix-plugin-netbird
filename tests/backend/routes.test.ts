@@ -69,6 +69,7 @@ function json(body: unknown, status = 200): Response {
 async function start(permissions: string[]) {
   let router: Router | null = null;
   mock = createMockCtx({
+    sandbox: true,
     pluginId: manifest.id,
     manifest,
     capabilities: manifest.capabilities,

@@ -45,11 +45,11 @@ Single sign-on uses the OpenID Connect authorization code flow with PKCE. The to
    - **Audience**: only for providers that need it to issue an API token (Auth0 does).
    - **Extra authorization parameters**: optional, for example `connector_id=<id>` to skip the connector choice of a Dex based IdP.
    - **Send the ID token**: only if your NetBird validates ID tokens instead of access tokens.
-5. Users click **Sign in with SSO** in the panel. A pop-up opens the identity provider; after the sign-in it closes and the panel reloads.
+5. Users click **Sign in with SSO** in the panel. Termix opens the identity provider in a new tab; after the sign-in that tab says so and can be closed, and the panel picks up the session by itself within a few seconds.
 
-What the plugin keeps: the refresh token and the display name, encrypted per user in Termix. The access token lives only in the Termix server's memory until it expires. **Sign out** in the panel deletes both. The plugin checks issuer, audience, nonce and expiry of the ID token; it comes straight from the token endpoint over TLS, so its signature is not checked again (OpenID Connect Core 3.1.3.7).
+What the plugin keeps: the refresh token and the display name, encrypted per user in Termix. The access token lives only in the memory of the plugin's process on the Termix server until it expires or the process stops. **Sign out** in the panel deletes both. The plugin checks issuer, audience, nonce and expiry of the ID token; it comes straight from the token endpoint over TLS, so its signature is not checked again (OpenID Connect Core 3.1.3.7).
 
-If the sign-in fails, the pop-up says so and the reason is in the Termix log. The common ones: the redirect URI is not registered, the client does not allow refresh tokens (`no refresh token`), or the issuer in the settings differs from the one in the token (`issuer mismatch`).
+If the sign-in fails, the sign-in tab says so and the reason is in the Termix log. The common ones: the redirect URI is not registered, the client does not allow refresh tokens (`no refresh token`), or the issuer in the settings differs from the one in the token (`issuer mismatch`).
 
 ## Set up the reachability check
 

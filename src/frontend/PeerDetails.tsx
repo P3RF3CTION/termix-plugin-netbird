@@ -3,7 +3,8 @@ import {
   useTranslation,
   type PluginApiClient,
 } from "@termix-ssh/plugin-sdk/frontend";
-import { CircleCheck, CircleHelp, CircleX, Loader2 } from "lucide-react";
+import { LoadingState } from "@termix-ssh/plugin-sdk/ui";
+import { CircleCheck, CircleHelp, CircleX } from "lucide-react";
 import type { PeerDetail, PostureFinding, RuleMatch } from "./types";
 
 interface Props {
@@ -42,10 +43,11 @@ export function PeerDetails({ api, peerId }: Props) {
   }
   if (!detail) {
     return (
-      <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" />
-        {t("detail.loading")}
-      </p>
+      <LoadingState
+        compact
+        className="text-[10px]"
+        label={t("detail.loading")}
+      />
     );
   }
 

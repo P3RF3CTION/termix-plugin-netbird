@@ -5,7 +5,13 @@ import {
   type HostDraft,
   type PluginApiClient,
 } from "@termix-ssh/plugin-sdk/frontend";
-import { Badge, Button, Checkbox, Input } from "@termix-ssh/plugin-sdk/ui";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Input,
+  LoadingState,
+} from "@termix-ssh/plugin-sdk/ui";
 import {
   ChevronDown,
   ChevronRight,
@@ -15,7 +21,6 @@ import {
   Copy,
   Download,
   ListChecks,
-  Loader2,
   Plus,
   RefreshCw,
 } from "lucide-react";
@@ -365,12 +370,7 @@ export function NetbirdPeersPanel({
         </div>
       )}
 
-      {loading && !data && (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" />
-          {t("panel.loading")}
-        </p>
-      )}
+      {loading && !data && <LoadingState compact label={t("panel.loading")} />}
 
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
 
@@ -547,7 +547,7 @@ export function NetbirdPeersPanel({
         <ImportDialog
           api={api}
           peerIds={[...selected]}
-          defaultPort={data?.peers[0]?.sshPort ?? 22}
+          defaultPort={data?.peers?.[0]?.sshPort ?? 22}
           open={importOpen}
           onClose={() => setImportOpen(false)}
           onDone={() => {

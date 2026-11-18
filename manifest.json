@@ -1,7 +1,7 @@
 {
   "id": "netbird",
   "name": "NetBird",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
   "author": {
     "name": "Maximilian Herz",
@@ -24,8 +24,8 @@
   ],
   "env": [],
   "engine": {
-    "termix": ">=26.10.3",
-    "api": "^1.8"
+    "termix": ">=26.11.2-0",
+    "api": "^2.0.0"
   },
   "capabilities": [
     "network:outbound",

@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.3.0
+## 2.0.0
+
+Made for plugin API 2 (Termix 26.11.2 and newer). Termix 26.11.2 no longer runs plugins made for plugin API 1, so 1.x stays switched off there; older Termix versions can't install 2.0.0 and keep 1.2.0.
+
+### Changed
+
+- Plugin API 2: `engine.api` `^2.0.0`, `engine.termix` `>=26.11.2-0`, SDK 2.8. The backend runs in its own plugin process and the panel in a sandboxed frame
+- Single sign-on opens the identity provider in a new tab through Termix instead of a pop-up window, and the panel picks up the session by itself once the sign-in is done. The callback page no longer runs a script
+- The panel works without the host editor handle a frame does not get: the single "add as host" button is then hidden, the bulk import is unchanged
+- Loading states use the SDK's `LoadingState`
 
 ### Added
 
@@ -9,6 +18,7 @@
 
 ### Security
 
+- The SSO callback page sends a strict Content-Security-Policy (no scripts, no framing)
 - CI: workflow permissions per job, actions pinned to commit SHAs, no inherited secrets, and an override for vulnerable glob/minimatch versions in the SDK's build tools
 
 ## 1.2.0
