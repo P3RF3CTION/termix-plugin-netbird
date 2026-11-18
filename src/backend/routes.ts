@@ -31,6 +31,11 @@ import {
   type PendingLogin,
 } from "./oidc.js";
 import {
+  reconcile,
+  type HostFinding,
+  type ReconcileAction,
+} from "./reconcile.js";
+import {
   evaluate,
   explain,
   findPeer,
@@ -114,6 +119,21 @@ export interface PeerDetail {
   policiesReadable: boolean;
 }
 
+export interface ReconcileResponse {
+  findings: HostFinding[];
+  /** False when the credential may not see every peer (role "user"). */
+  complete: boolean;
+  staleDays: number;
+}
+
+export interface ReconcileApplyResult {
+  updated: Array<{ hostId: number; ip: string }>;
+  deleted: Array<{ hostId: number }>;
+  /** stale: the server no longer finds this action for the host. */
+  skipped: Array<{ hostId: number; reason: "stale" | "exists" }>;
+  failed: Array<{ hostId: number }>;
+}
+
 export interface ImportResult {
   created: Array<{ peerId: string; hostId: number; name: string }>;
   skipped: Array<{ peerId: string; reason: "exists" | "no-ip" | "unknown" }>;
@@ -166,6 +186,7 @@ function callbackPage(ok: boolean, message: string, origin: string): string {
 export function registerRoutes(router: Router, ctx: PluginContext): void {
   const view = ctx.rbac.require("peers.view") as never;
   const importer = ctx.rbac.require("peers.import") as never;
+  const reconciler = ctx.rbac.require("peers.reconcile") as never;
 
   const actor = () => ctx.currentActor() as string;
 
@@ -428,7 +449,7 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
         credential = service;
         loaded = await loadPeersAndPolicies(ctx, credential);
       }
-      const { peers, policies, policiesReadable } = loaded;
+      const { peers, policies, policiesReadable, postureChecks } = loaded;
       const identity = await whoAmI(ctx, credential);
       const sshPort = clampPort(await ctx.settings.get<number>("sshPort"));
       const reference = (
@@ -460,11 +481,12 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
               groups: groupNames(p),
               sshPort,
               reachability: policiesReadable
-                ? evaluate(policies, termix, p, sshPort)
+                ? evaluate(policies, termix, p, sshPort, postureChecks)
                 : {
                     state: "unknown" as const,
                     policies: [],
                     postureChecks: false,
+                    posture: "none" as const,
                   },
               imported: ip.length > 0 && existing.has(`${ip}:${sshPort}`),
               sshEnabled: p.ssh_enabled === true,
@@ -527,10 +549,11 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
     if (!credential) return res.status(412).json({ error: "signin" });
 
     try {
-      const [{ peers, policies, policiesReadable }, peer] = await Promise.all([
-        loadPeersAndPolicies(ctx, credential),
-        netbirdGet<NetbirdPeer>(ctx, credential, `/peers/${peerId}`),
-      ]);
+      const [{ peers, policies, policiesReadable, postureChecks }, peer] =
+        await Promise.all([
+          loadPeersAndPolicies(ctx, credential),
+          netbirdGet<NetbirdPeer>(ctx, credential, `/peers/${peerId}`),
+        ]);
       let accessible: number | null =
         typeof peer.accessible_peers_count === "number"
           ? peer.accessible_peers_count
@@ -582,7 +605,13 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
         accessiblePeers: accessible,
         groups: groupNames(peer),
         explanation: policiesReadable
-          ? explain(policies, termix, peer, [sshPort, ...extraPorts])
+          ? explain(
+              policies,
+              termix,
+              peer,
+              [sshPort, ...extraPorts],
+              postureChecks,
+            )
           : explain([], null, peer, [sshPort, ...extraPorts]),
         policiesReadable,
       };
@@ -754,6 +783,229 @@ export function registerRoutes(router: Router, ctx: PluginContext): void {
             `Host for peer ${peer.id} could not be created: ${(err as Error).message}`,
           );
           result.failed.push({ peerId });
+        }
+      }
+      return res.json(result);
+    },
+  );
+
+  // ------------------------------------------------------------- reconcile
+
+  /** The findings for the acting user's own hosts, from fresh NetBird data. */
+  async function findStaleHosts(
+    credential: NonNullable<Awaited<ReturnType<typeof resolveCredential>>>,
+  ): Promise<ReconcileResponse> {
+    const [peers, identity, owned] = await Promise.all([
+      netbirdGet<NetbirdPeer[]>(ctx, credential, "/peers"),
+      whoAmI(ctx, credential),
+      ctx.hosts.listOwned(),
+    ]);
+    // Only a credential that sees every peer may call a peer "gone". A
+    // NetBird user with the role "user" sees just their own peers, and an
+    // unknown role (old server) is treated the same way.
+    const complete =
+      identity !== null && identity.role !== "" && identity.role !== "user";
+    const rawDays = await ctx.settings.get<number>("staleDays");
+    const staleDays =
+      typeof rawDays === "number" && Number.isInteger(rawDays) && rawDays >= 0
+        ? Math.min(rawDays, 3650)
+        : 30;
+    const findings = reconcile(owned, Array.isArray(peers) ? peers : [], {
+      staleDays,
+      complete,
+    });
+    return {
+      findings,
+      complete,
+      staleDays,
+    };
+  }
+
+  /**
+   * @openapi
+   * /plugin-api/netbird/hosts/reconcile:
+   *   get:
+   *     summary: Find the user's hosts whose NetBird peer is gone, moved or offline
+   *     description: >
+   *       Compares the signed-in user's own Termix hosts that belong to NetBird
+   *       (imported by this plugin, tagged "netbird" or on a peer's NetBird IP)
+   *       with the peers NetBird lists now. Reports hosts whose peer no longer
+   *       exists, whose NetBird IP changed, or whose peer has been offline for
+   *       longer than the "Offline days before a host counts as stale" setting,
+   *       each with the actions the server allows. A missing peer is only
+   *       offered for removal when the credential sees every peer. Requires
+   *       netbird.peers.reconcile.
+   *     tags:
+   *       - NetBird
+   *     responses:
+   *       200:
+   *         description: The findings.
+   *       401:
+   *         description: NetBird rejected the credential.
+   *       412:
+   *         description: No NetBird sign-in for this user.
+   *       502:
+   *         description: The NetBird management API could not be read.
+   */
+  router.get(
+    "/hosts/reconcile",
+    reconciler,
+    async (_req: Request, res: Response) => {
+      const credential = await resolveCredential(ctx, actor());
+      if (!credential) return res.status(412).json({ error: "signin" });
+      try {
+        return res.json(await findStaleHosts(credential));
+      } catch (err) {
+        return sendError(res, err, ctx);
+      }
+    },
+  );
+
+  /**
+   * @openapi
+   * /plugin-api/netbird/hosts/reconcile:
+   *   post:
+   *     summary: Update or remove the selected stale hosts
+   *     description: >
+   *       Recomputes the findings and applies only actions the server found for
+   *       that host: update-ip sets the host to the peer's current NetBird IP,
+   *       delete removes the host (needs the core hosts.delete permission as
+   *       well). Every change is written to the audit log. Requires
+   *       netbird.peers.reconcile.
+   *     tags:
+   *       - NetBird
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [actions]
+   *             properties:
+   *               actions:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required: [hostId, action]
+   *                   properties:
+   *                     hostId:
+   *                       type: integer
+   *                     action:
+   *                       type: string
+   *                       enum: [update-ip, delete]
+   *     responses:
+   *       200:
+   *         description: Updated, deleted, skipped and failed hosts.
+   *       400:
+   *         description: Invalid request.
+   *       412:
+   *         description: No NetBird sign-in for this user.
+   */
+  router.post(
+    "/hosts/reconcile",
+    reconciler,
+    async (req: Request, res: Response) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const raw = Array.isArray(body.actions) ? body.actions : [];
+      const requested = new Map<number, ReconcileAction>();
+      for (const item of raw as Array<Record<string, unknown>>) {
+        const hostId = item?.hostId;
+        const action = item?.action;
+        if (
+          typeof hostId === "number" &&
+          Number.isInteger(hostId) &&
+          (action === "update-ip" || action === "delete")
+        ) {
+          requested.set(hostId, action);
+        }
+      }
+      if (requested.size === 0 || requested.size > 200 || raw.length > 200) {
+        return res.status(400).json({ error: "actions" });
+      }
+
+      const credential = await resolveCredential(ctx, actor());
+      if (!credential) return res.status(412).json({ error: "signin" });
+      let current: ReconcileResponse;
+      try {
+        current = await findStaleHosts(credential);
+      } catch (err) {
+        return sendError(res, err, ctx);
+      }
+
+      const byHost = new Map(current.findings.map((f) => [f.hostId, f]));
+      const taken = new Set(
+        (await ctx.hosts.listOwned().catch(() => [])).map(
+          (h) => `${h.ip}:${h.port}`,
+        ),
+      );
+      const result: ReconcileApplyResult = {
+        updated: [],
+        deleted: [],
+        skipped: [],
+        failed: [],
+      };
+
+      for (const [hostId, action] of requested) {
+        const finding = byHost.get(hostId);
+        if (!finding || !finding.actions.includes(action)) {
+          result.skipped.push({ hostId, reason: "stale" });
+          continue;
+        }
+        const details = JSON.stringify({
+          kind: finding.kind,
+          peerId: finding.peerId,
+          from: finding.hostIp,
+          to: action === "update-ip" ? finding.peerIp : null,
+        });
+        try {
+          if (action === "update-ip") {
+            const ip = finding.peerIp!;
+            if (taken.has(`${ip}:${finding.port}`)) {
+              result.skipped.push({ hostId, reason: "exists" });
+              continue;
+            }
+            const updated = await ctx.hosts.update(hostId, { ip });
+            if (!updated) throw new Error("host not found or not owned");
+            taken.delete(`${finding.hostIp}:${finding.port}`);
+            taken.add(`${ip}:${finding.port}`);
+            result.updated.push({ hostId, ip });
+          } else {
+            const deleted = await ctx.hosts.delete(hostId);
+            if (!deleted) throw new Error("host not found or not owned");
+            result.deleted.push({ hostId });
+          }
+          await ctx.audit.record({
+            action:
+              action === "update-ip"
+                ? "netbird_host_ip_updated"
+                : "netbird_host_removed",
+            resourceType: "host",
+            resourceId: String(hostId),
+            resourceName: finding.hostName,
+            details,
+            success: true,
+            request: req,
+          });
+        } catch (err) {
+          ctx.log.warn(
+            `Host ${hostId} could not be ${action === "delete" ? "removed" : "updated"}: ${(err as Error).message}`,
+          );
+          result.failed.push({ hostId });
+          await ctx.audit
+            .record({
+              action:
+                action === "update-ip"
+                  ? "netbird_host_ip_updated"
+                  : "netbird_host_removed",
+              resourceType: "host",
+              resourceId: String(hostId),
+              resourceName: finding.hostName,
+              details,
+              success: false,
+              errorMessage: (err as Error).message,
+              request: req,
+            })
+            .catch(() => undefined);
         }
       }
       return res.json(result);

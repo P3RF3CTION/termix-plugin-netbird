@@ -1,5 +1,6 @@
 import type { PluginContext } from "@termix-ssh/plugin-sdk/backend";
 import type { NetbirdCredential } from "./auth.js";
+import type { NetbirdPostureCheck } from "./posture.js";
 import type { NetbirdPeer, NetbirdPolicy } from "./reachability.js";
 
 export const DEFAULT_MANAGEMENT_URL = "https://api.netbird.io";
@@ -36,6 +37,7 @@ type ApiPath =
   | "/users/current"
   | "/peers"
   | "/policies"
+  | "/posture-checks"
   | `/peers/${string}`
   | `/peers/${string}/accessible-peers`;
 
@@ -114,6 +116,8 @@ export async function loadPeersAndPolicies(
   peers: NetbirdPeer[];
   policies: NetbirdPolicy[];
   policiesReadable: boolean;
+  /** null when a policy uses posture checks but they cannot be read. */
+  postureChecks: NetbirdPostureCheck[] | null;
 }> {
   const peers = await netbirdGet<NetbirdPeer[]>(ctx, credential, "/peers");
   // A regular NetBird user may list peers but not policies. The check then
@@ -134,9 +138,32 @@ export async function loadPeersAndPolicies(
       throw err;
     }
   }
+  // Posture checks are read only when a policy uses them. A role that may
+  // read policies but not posture checks leaves them "unknown".
+  let postureChecks: NetbirdPostureCheck[] | null = [];
+  if (policies.some((p) => (p.source_posture_checks ?? []).length > 0)) {
+    try {
+      const result = await netbirdGet<NetbirdPostureCheck[]>(
+        ctx,
+        credential,
+        "/posture-checks",
+      );
+      postureChecks = Array.isArray(result) ? result : [];
+    } catch (err) {
+      if (
+        err instanceof NetbirdApiError &&
+        (err.status === 403 || err.status === 404)
+      ) {
+        postureChecks = null;
+      } else {
+        throw err;
+      }
+    }
+  }
   return {
     peers: Array.isArray(peers) ? peers : [],
     policies,
     policiesReadable,
+    postureChecks,
   };
 }

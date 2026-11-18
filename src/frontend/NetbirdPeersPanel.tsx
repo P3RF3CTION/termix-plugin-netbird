@@ -14,6 +14,7 @@ import {
   CircleX,
   Copy,
   Download,
+  ListChecks,
   Loader2,
   Plus,
   RefreshCw,
@@ -21,6 +22,7 @@ import {
 import { AuthBar } from "./AuthBar";
 import { ImportDialog } from "./ImportDialog";
 import { PeerDetails } from "./PeerDetails";
+import { ReconcileView } from "./ReconcileView";
 import type { PeersResponse, PeerView } from "./types";
 
 export type { PeersResponse, PeerView } from "./types";
@@ -31,6 +33,14 @@ interface Props {
   onAddHost?: (draft: HostDraft) => void;
   /** The user holds netbird.peers.import. */
   canImport?: boolean;
+  /** The user holds netbird.peers.reconcile. */
+  canReconcile?: boolean;
+  /** Asks the user to confirm, over the panel. */
+  confirm?: (options: {
+    title: string;
+    description?: string;
+    confirmLabel?: string;
+  }) => Promise<boolean>;
 }
 
 function errorBody(err: unknown): PeersResponse | null {
@@ -44,6 +54,8 @@ export function NetbirdPeersPanel({
   api,
   onAddHost,
   canImport = false,
+  canReconcile = false,
+  confirm,
 }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -55,6 +67,7 @@ export function NetbirdPeersPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,20 +129,44 @@ export function NetbirdPeersPanel({
       return <Badge variant="outline">{t("panel.self")}</Badge>;
     }
     if (r.state === "allowed") {
+      const postureNote =
+        r.posture === "pass"
+          ? t("reach.posturePass")
+          : r.posture === "unknown" || (r.postureChecks && !r.posture)
+            ? t("reach.postureUnknown")
+            : "";
       const title = [
         t("reach.allowedBy", { policies: r.policies.join(", ") }),
-        r.postureChecks ? t("reach.postureChecks") : "",
+        postureNote,
       ]
         .filter(Boolean)
         .join(" ");
       return (
         <span
-          className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400"
+          className={
+            r.posture === "unknown"
+              ? "flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400"
+              : "flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400"
+          }
           title={title}
           data-testid={`reach-${peer.id}`}
         >
           <CircleCheck className="size-3" />
           {t("reach.allowed", { port: peer.sshPort })}
+        </span>
+      );
+    }
+    if (r.state === "blocked" && r.posture === "fail") {
+      return (
+        <span
+          className="flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400"
+          title={t("reach.postureBlockedHint", {
+            policies: r.policies.join(", "),
+          })}
+          data-testid={`reach-${peer.id}`}
+        >
+          <CircleX className="size-3" />
+          {t("reach.postureBlocked", { port: peer.sshPort })}
         </span>
       );
     }
@@ -193,6 +230,19 @@ export function NetbirdPeersPanel({
     else checkInfo = t("panel.termixPeerUnset");
   }
 
+  if (reconcileOpen) {
+    return (
+      <div className="flex h-full flex-col gap-2 p-2">
+        <ReconcileView
+          api={api}
+          confirm={confirm}
+          onClose={() => setReconcileOpen(false)}
+          onChanged={() => void load()}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col gap-2 p-2">
       <AuthBar api={api} onChange={() => void load()} />
@@ -204,6 +254,18 @@ export function NetbirdPeersPanel({
           aria-label={t("panel.search")}
           className="h-8 text-xs"
         />
+        {canReconcile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title={t("reconcile.open")}
+            aria-label={t("reconcile.open")}
+            onClick={() => setReconcileOpen(true)}
+            data-testid="open-reconcile"
+          >
+            <ListChecks className="size-3.5" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"

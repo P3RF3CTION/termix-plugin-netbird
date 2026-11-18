@@ -127,6 +127,7 @@ describe("evaluate", () => {
       state: "allowed",
       policies: ["Termix zu Oracle (SSH)"],
       postureChecks: false,
+      posture: "none",
     });
   });
 

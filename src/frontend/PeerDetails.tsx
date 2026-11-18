@@ -4,7 +4,7 @@ import {
   type PluginApiClient,
 } from "@termix-ssh/plugin-sdk/frontend";
 import { CircleCheck, CircleHelp, CircleX, Loader2 } from "lucide-react";
-import type { PeerDetail, RuleMatch } from "./types";
+import type { PeerDetail, PostureFinding, RuleMatch } from "./types";
 
 interface Props {
   api: PluginApiClient;
@@ -80,6 +80,25 @@ export function PeerDetails({ api, peerId }: Props) {
     ],
   ];
 
+  const findingLine = (f: PostureFinding, i: number) => (
+    <li
+      key={`${f.check}-${f.kind}-${i}`}
+      className={
+        f.state === "fail"
+          ? "text-red-600 dark:text-red-400"
+          : f.state === "unknown"
+            ? "text-muted-foreground"
+            : undefined
+      }
+    >
+      {t(`posture.state.${f.state}`)} {f.check}:{" "}
+      {t(`posture.kind.${f.kind}`, {
+        required: f.required || "-",
+        actual: f.actual || t("posture.notReported"),
+      })}
+    </li>
+  );
+
   const ruleLine = (m: RuleMatch) => (
     <li key={`${m.policy}-${m.rule}-${m.ports}-${m.direction}`}>
       {t("detail.ruleLine", {
@@ -89,7 +108,16 @@ export function PeerDetails({ api, peerId }: Props) {
         ports: m.ports,
       })}
       {m.direction === "reverse" && ` (${t("detail.reverse")})`}
-      {m.postureChecks && ` (${t("detail.posture")})`}
+      {m.postureChecks && !m.posture && ` (${t("detail.posture")})`}
+      {m.posture && (
+        <>
+          {" "}
+          ({t(`posture.summary.${m.posture.state}`, { peer: m.posture.peer })})
+          <ul className="ml-4 list-[circle]">
+            {m.posture.findings.map(findingLine)}
+          </ul>
+        </>
+      )}
     </li>
   );
 
@@ -148,7 +176,18 @@ export function PeerDetails({ api, peerId }: Props) {
                   </ul>
                 </>
               )}
-              {p.state === "blocked" && (
+              {p.state === "blocked" && p.postureBlocked && (
+                <>
+                  <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                    <CircleX className="size-3" />
+                    {t("detail.portPostureBlocked", { port: p.port })}
+                  </span>
+                  <ul className="ml-4 list-disc">
+                    {p.allowedBy.map(ruleLine)}
+                  </ul>
+                </>
+              )}
+              {p.state === "blocked" && !p.postureBlocked && (
                 <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
                   <CircleX className="size-3" />
                   {t("detail.portBlocked", { port: p.port })}

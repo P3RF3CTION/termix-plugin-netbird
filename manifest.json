@@ -1,7 +1,7 @@
 {
   "id": "netbird",
   "name": "NetBird",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
   "author": {
     "name": "Maximilian Herz",
@@ -17,8 +17,9 @@
     "Single sign-on with any OpenID Connect provider (code flow with PKCE), so each user sees what NetBird lets them see",
     "Service user token or a personal access token per user as an alternative",
     "Select peers and add them as hosts in one go, into a folder, with a saved credential; existing hosts are skipped",
+    "Finds hosts whose NetBird peer is gone, got a new NetBird IP or has been offline for a long time, and updates or removes them after you confirm",
     "Peer details: client version, location, login expiry, accessible peers",
-    "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
+    "Explains per port which policy rule lets Termix reach a peer, checks its posture checks (version, OS, location) and names other rules",
     "Works with NetBird Cloud and self-hosted management servers"
   ],
   "env": [],
@@ -55,6 +56,12 @@
         "name": "peers.import",
         "titleKey": "permissions.peers.import.title",
         "descriptionKey": "permissions.peers.import.description",
+        "defaultRoles": ["admin"]
+      },
+      {
+        "name": "peers.reconcile",
+        "titleKey": "permissions.peers.reconcile.title",
+        "descriptionKey": "permissions.peers.reconcile.description",
         "defaultRoles": ["admin"]
       }
     ],
@@ -183,6 +190,16 @@
           "placeholderKey": "settings.checkPorts.placeholder",
           "default": "",
           "group": "settings.group.check"
+        },
+        {
+          "key": "staleDays",
+          "type": "number",
+          "labelKey": "settings.staleDays.label",
+          "descriptionKey": "settings.staleDays.description",
+          "default": 30,
+          "min": 0,
+          "max": 3650,
+          "group": "settings.group.hosts"
         }
       ],
       "user": [
