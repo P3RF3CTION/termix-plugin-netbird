@@ -1,7 +1,7 @@
 {
   "registry": "p3rf3ction",
   "name": "P3RF3CTION plugins",
-  "updatedAt": "2026-10-28T15:33:01.123Z",
+  "updatedAt": "2026-11-18T18:49:15.187Z",
   "publicKey": "EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=",
   "plugins": [
     {
@@ -18,11 +18,32 @@
         "Single sign-on with any OpenID Connect provider (code flow with PKCE), so each user sees what NetBird lets them see",
         "Service user token or a personal access token per user as an alternative",
         "Select peers and add them as hosts in one go, into a folder, with a saved credential; existing hosts are skipped",
+        "Finds hosts whose NetBird peer is gone, got a new NetBird IP or has been offline for a long time, and updates or removes them after you confirm",
         "Peer details: client version, location, login expiry, accessible peers",
-        "Explains per port which policy rule allows the Termix server to reach a peer, which rules use other ports and which are switched off",
+        "Explains per port which policy rule lets Termix reach a peer, checks its posture checks (version, OS, location) and names other rules",
         "Works with NetBird Cloud and self-hosted management servers"
       ],
       "versions": [
+        {
+          "version": "2.0.0",
+          "api": "^2.0.0",
+          "url": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/download/v2.0.0/netbird-2.0.0.tmxplug",
+          "sha256": "15a816e0e6a688b12d34817c3ebf42f698504de3f2a72c95976b5ffce513bc29",
+          "signature": "id9nnoVkobKxGTVq7u2KWJNmZkTQWg0uAVbKGIP4yobXyqWROJp451BV2g/dWtW4LDBeEpi0kpIi/+dxHcBZBQ==",
+          "size": 110990,
+          "capabilities": [
+            "network:outbound",
+            "network:serve",
+            "ui:surface",
+            "hosts:read",
+            "hosts:write",
+            "kv:own",
+            "secrets:own",
+            "credentials:use"
+          ],
+          "releaseNotesUrl": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/tag/v2.0.0",
+          "publishedAt": "2026-11-18T18:48:43Z"
+        },
         {
           "version": "1.2.0",
           "api": "^1.8",
