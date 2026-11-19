@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.1
+
+Maintenance release with no change in behaviour. Requirements are unchanged: Termix 26.11.2 or newer (plugin API 2).
+
+### Changed
+
+- Dependency updates: lucide-react 1.72.0 (icons in the panel), and for development and build typescript 7.0.2, vitest 5.1.0, jsdom 30.1.3, better-sqlite3 13.1.1, i18next 26.7.2, react-i18next 17.1.13, prettier 3.10.0, @types/node 26.6.6 and commitlint 21.2.4
+
 ## 2.0.0
 
 Made for plugin API 2 (Termix 26.11.2 and newer). Termix 26.11.2 no longer runs plugins made for plugin API 1, so 1.x stays switched off there; older Termix versions can't install 2.0.0 and keep 1.2.0.

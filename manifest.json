@@ -1,7 +1,7 @@
 {
   "id": "netbird",
   "name": "NetBird",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Lists the peers of your NetBird network, signs you in with your identity provider or a token, imports peers as hosts and explains which access policy lets Termix reach them.",
   "author": {
     "name": "Maximilian Herz",
