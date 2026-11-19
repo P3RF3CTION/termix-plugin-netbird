@@ -2,7 +2,9 @@ name: Release
 
 # Run by hand from a dev-X.Y.Z branch. stable releases X.Y.Z and merges the
 # branch into main; beta publishes X.Y.Z-beta.N for plugins on the beta
-# channel. overwrite releases the manifest version again from this commit.
+# channel. sign (run from main) skips the build and only signs the published
+# release of the manifest version and rewrites the registry index, for a run
+# whose release was published but whose sign or registry job did not run.
 
 on:
   workflow_dispatch:
@@ -16,14 +18,14 @@ on:
           - stable
           - beta
       mode:
-        description: "release, overwrite (stable only) or dry-run"
+        description: "release, dry-run, or sign (an already published release, run from main)"
         required: true
         default: release
         type: choice
         options:
           - release
-          - overwrite
           - dry-run
+          - sign
 
 # Nothing at the workflow level; every job asks for what it needs.
 permissions: {}
@@ -36,6 +38,7 @@ concurrency:
 
 jobs:
   release:
+    if: ${{ inputs.mode != 'sign' }}
     permissions:
       contents: write
       # Build provenance, so the community registry can check where the file
@@ -54,7 +57,8 @@ jobs:
   # SDK version from package-lock.json, and attaches the .sig.
   sign:
     needs: release
-    if: ${{ inputs.mode != 'dry-run' }}
+    # In sign mode the release job is skipped on purpose.
+    if: ${{ !cancelled() && (needs.release.result == 'success' && inputs.mode == 'release' || needs.release.result == 'skipped' && inputs.mode == 'sign') }}
     runs-on: ubuntu-latest
     permissions:
       # gh release upload
@@ -62,7 +66,8 @@ jobs:
     steps:
       # The version to sign comes from manifest.json at this ref. A stable
       # release merges the dev branch into main and deletes it, so read main;
-      # a beta or an overwrite leaves main alone, so read the commit it ran on.
+      # a beta leaves main alone, so read the commit it ran on (main in sign
+      # mode).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ (inputs.channel == 'stable' && inputs.mode == 'release') && 'main' || github.sha }}
@@ -110,7 +115,7 @@ jobs:
   # added as a plugin registry, from the signed release files.
   registry:
     needs: sign
-    if: ${{ inputs.mode != 'dry-run' }}
+    if: ${{ !cancelled() && needs.sign.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       # git push of registry/index.json

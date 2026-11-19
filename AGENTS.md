@@ -129,7 +129,12 @@ aren't obvious from the code, and anything that has bitten you before.
   not go to code on `@main` of a foreign repo;
   `registry/public-key.txt` is the public half of `TERMIX_PLUGIN_SIGNING_KEY` (repo secret, key
   ID `f693b96cabb971be`). Never edit the index by hand. A new key means every installation has
-  to add the registry again.
+  to add the registry again. If a release got published but `sign`/`registry` did not run (e.g. the
+  shared workflow's publish step failed after creating the draft), run Release from `main` with
+  mode `sign`: it signs the published release of the manifest version and rewrites the index.
+  The `.sig` and this index are for this repo's own registry only; the community registry signs
+  listed versions itself with the community key after review (`community/plugins/netbird.json`
+  in Termix-SSH/Termix-Registry).
 - CI: `ci.yml` calls the shared `plugin-ci.yml@main` of Termix-SSH, which changes without a commit
   here. It runs zizmor on our workflows (high severity fails: permissions only per job, every
   action outside `Termix-SSH/*` pinned to a commit SHA with the tag as comment) and osv-scanner on
