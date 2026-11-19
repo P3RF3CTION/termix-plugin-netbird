@@ -1,7 +1,7 @@
 {
   "registry": "p3rf3ction",
   "name": "P3RF3CTION plugins",
-  "updatedAt": "2026-11-18T18:49:15.187Z",
+  "updatedAt": "2026-11-19T08:14:31.281Z",
   "publicKey": "EGRXgkn9EHcWECiivVxHp06XvkSQCFUj8VOxUUwC0lo=",
   "plugins": [
     {
@@ -24,6 +24,26 @@
         "Works with NetBird Cloud and self-hosted management servers"
       ],
       "versions": [
+        {
+          "version": "2.0.1",
+          "api": "^2.0.0",
+          "url": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/download/v2.0.1/netbird-2.0.1.tmxplug",
+          "sha256": "2a134b7e79871854fc2bcd945063b72f298ecc92a230ccd5b7386cef83e0ee08",
+          "signature": "3YSWVsv6LqYbS2AQni22DopM9RBkt7YoMhtAUCIrKJkWysW8PdNW39B/PVXjwTPGWu/v8qhcilD31QGI8wBGCQ==",
+          "size": 111168,
+          "capabilities": [
+            "network:outbound",
+            "network:serve",
+            "ui:surface",
+            "hosts:read",
+            "hosts:write",
+            "kv:own",
+            "secrets:own",
+            "credentials:use"
+          ],
+          "releaseNotesUrl": "https://github.com/P3RF3CTION/termix-plugin-netbird/releases/tag/v2.0.1",
+          "publishedAt": "2026-11-19T08:11:45Z"
+        },
         {
           "version": "2.0.0",
           "api": "^2.0.0",
