@@ -35,3 +35,10 @@ updates:
       # by hand together with engine in manifest.json.
       - dependency-name: "@termix-ssh/plugin-sdk"
         update-types: ["version-update:semver-major"]
+      # Shared from Termix at runtime and never bundled; the dev copies only
+      # serve the tests and must match what Termix ships and the SDK's peer
+      # range (i18next ^26, react-i18next ^17). Lift together once both move.
+      - dependency-name: "i18next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-i18next"
+        update-types: ["version-update:semver-major"]
