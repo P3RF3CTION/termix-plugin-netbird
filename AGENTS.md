@@ -143,6 +143,11 @@ aren't obvious from the code, and anything that has bitten you before.
   once the SDK ships a fixed version. CI also runs weekly on Monday, so drift in the shared
   workflow shows on main first. Dependabot (`.github/dependabot.yml`, one week cooldown) bumps the
   action SHAs and npm, but not an SDK major: that one changes the plugin API and `engine` too.
+  It also skips majors of `i18next` and `react-i18next`: Termix shares both with the frame at
+  runtime (never bundled), so the dev copies only serve the tests and have to match what Termix
+  ships and the SDK's peer range (i18next ^26, react-i18next ^17 as of SDK 2.9). i18next 27 /
+  react-i18next 18 install only with an invalid tree (`npm ls` fails, later installs hit ERESOLVE).
+  Lift both together once Termix and the SDK move.
 - Release jobs `sign`/`registry` find the release by the manifest version (`X.Y.Z` or the newest
   `X.Y.Z-beta.N`), not by "newest release"; `concurrency: release` keeps runs from overlapping.
   Leave the `release` job (the `uses:` of Termix-SSH) as the template has it: the community
