@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.2
+
+Maintenance release with no change in behaviour. Requirements are unchanged: Termix 26.11.2 or newer (plugin API 2).
+
+### Changed
+
+- Dependency updates: lucide-react 1.73.0 (icons in the panel), and for development and build plugin SDK 2.9.0, jsdom 31.0.1, better-sqlite3 13.2.0, prettier 3.10.1 and lint-staged 17.6.1
+
 ## 2.0.1
 
 Maintenance release with no change in behaviour. Requirements are unchanged: Termix 26.11.2 or newer (plugin API 2).
